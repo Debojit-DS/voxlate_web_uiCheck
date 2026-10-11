@@ -21,6 +21,8 @@ export type PublicWaitlistEntry = {
 
 export type PublicWaitlistResponse = {
   status: "success";
+  /** Set when the request failed, so the page can tell an outage from an empty list. */
+  failed?: true;
   data: PublicWaitlistEntry[];
   pagination: {
     page: number;
@@ -42,6 +44,7 @@ export async function getPublicWaitlist(page = 1, pageSize = 20): Promise<Public
         status: "success",
         data: [],
         pagination: { page, pageSize, total: 0, totalPages: 0 },
+        failed: true,
       };
     }
 
@@ -51,6 +54,7 @@ export async function getPublicWaitlist(page = 1, pageSize = 20): Promise<Public
         status: "success",
         data: [],
         pagination: { page, pageSize, total: 0, totalPages: 0 },
+        failed: true,
       };
     }
 
@@ -60,6 +64,7 @@ export async function getPublicWaitlist(page = 1, pageSize = 20): Promise<Public
       status: "success",
       data: [],
       pagination: { page, pageSize, total: 0, totalPages: 0 },
+      failed: true,
     };
   }
 }

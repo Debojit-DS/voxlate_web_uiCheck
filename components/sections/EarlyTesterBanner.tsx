@@ -1,58 +1,30 @@
-"use client";
+import { UnderlineLink } from "@/components/ui/UnderlineLink";
+import { WaitlistButton } from "@/components/waitlist/WaitlistButton";
 
-import { Rocket, Gift, Bell, Award, Users, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { useGatedWaitlist } from "@/components/auth/useGatedWaitlist";
-import { useDemoTransition } from "@/components/transitions/useDemoTransition";
+const PERKS = ["Early Access", "Free Product Testing (Selected Users)", "Priority Updates", "Founding Community Badge"];
 
-const PERKS = [
-  { icon: Rocket, label: "Early Access" },
-  { icon: Gift, label: "Free Product Testing", sub: "(Selected Users)" },
-  { icon: Bell, label: "Priority Updates" },
-  { icon: Award, label: "Founding Community Badge" },
-];
-
+/** Quiet closing call to action shared by Home and Digital. Wording from the original banner. */
 export function EarlyTesterBanner({ source = "tester-banner" }: { source?: string }) {
-  const { openWaitlist } = useGatedWaitlist();
-  const { goToDemo } = useDemoTransition();
-
   return (
-    <section className="bg-bg-page pb-10 md:pb-12">
-      <div className="mx-auto max-w-[1200px] px-6 md:px-8">
-        <div className="rounded-card bg-bg-surface-alt p-8 md:p-10">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-navy-cta text-white">
-                <Users size={24} />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-text-primary">Become an Early Tester</h3>
-                <p className="mt-2 text-text-secondary text-sm md:text-base max-w-md">
-                  Join today and selected users will receive early product testing access before the official public release.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 md:gap-8">
-              {PERKS.map((perk) => (
-                <div key={perk.label} className="flex flex-col items-center text-center">
-                  <perk.icon size={28} className="text-navy-cta mb-2" strokeWidth={1.5} />
-                  <p className="text-xs font-medium text-text-primary leading-tight">{perk.label}</p>
-                  {perk.sub && <p className="text-[10px] text-text-muted leading-tight mt-0.5">{perk.sub}</p>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button variant="primary-orange" onClick={() => openWaitlist(source)} icon={ArrowRight}>
-              Join Waitlist Now
-            </Button>
-            <Button variant="primary-demo" onClick={goToDemo}>
+    <section aria-labelledby={`tester-${source}`} className="border-t border-line bg-mist/60 py-16 md:py-24">
+      <div className="page-container grid gap-10 md:grid-cols-[1.3fr_1fr] md:items-end md:gap-16">
+        <div>
+          <h2 id={`tester-${source}`} className="display-section">Become an Early Tester</h2>
+          <p className="mt-4 max-w-[52ch] text-[17px] leading-relaxed text-slate">
+            Join today and selected users will receive early product testing access before the official public release.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <WaitlistButton source={source} label="Join Waitlist Now" wide />
+            <UnderlineLink href="/demo" variant="goes-out-comes-in" direction="right" className="text-[15px] font-semibold">
               View Our Demo
-            </Button>
+            </UnderlineLink>
           </div>
         </div>
+        <ul className="divide-y divide-line border-y border-line text-[16px] text-ink">
+          {PERKS.map((perk) => (
+            <li key={perk} className="py-3">{perk}</li>
+          ))}
+        </ul>
       </div>
     </section>
   );

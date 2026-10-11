@@ -1,51 +1,54 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { ChevronDown, Play, Pause, Star } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Mic, Square, RotateCcw, Loader2, Lock, TriangleAlert } from "lucide-react";
 import { useDemoGate } from "@/components/auth/useDemoGate";
 import { useWaitlistModal } from "@/components/waitlist/WaitlistModalProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useAuthPrompt } from "@/components/auth/AuthPromptProvider";
 import { Button } from "@/components/ui/Button";
+import { LanguageSelect } from "@/components/ui/LanguageSelect";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const LANGUAGES = ["English", "Spanish", "French", "German", "Bengali", "Tamil", "Hindi", "Japanese", "Chinese", "Arabic"];
+import { DEMO_LANGUAGE_NAMES as LANGUAGES, DEMO_LANGUAGE_CODES as LANGUAGE_MAP } from "@/lib/demoLanguages";
 
-const LANGUAGE_MAP: Record<string, string> = {
-  "English": "en",
-  "Spanish": "es",
-  "French": "fr",
-  "German": "de",
-  "Bengali": "bn",
-  "Tamil": "ta",
-  "Hindi": "hi",
-  "Japanese": "ja",
-  "Chinese": "zh",
-  "Arabic": "ar"
-};
+const DEMO_LIMIT = 5;
 
-type MicState = "idle" | "recording" | "processing" | "completed";
+type Phase =
+  | "idle"
+  | "permission"
+  | "denied"
+  | "recording"
+  | "processing"
+  | "result"
+  | "error"
+  | "disconnected"
+  | "quota";
+
+const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
 export function DemoCard() {
   const [language, setLanguage] = useState("Hindi");
-  const [micState, setMicState] = useState<MicState>("idle");
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [elapsed, setElapsed] = useState(0);
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration] = useState("00:10"); 
-  const [receivedAudioUrl, setReceivedAudioUrl] = useState<string | null>(null);
-  
-  // FIX 1: Prevents hydration mismatch by tracking client-side mount
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [resultLanguage, setResultLanguage] = useState("");
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState("");
 
-  const { status, isAllowed, isLoading, promptJoinWaitlist } = useDemoGate();
+  const { isAllowed, isLoading: isGateLoading, promptJoinWaitlist } = useDemoGate();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { openPrompt } = useAuthPrompt();
   const { openModal } = useWaitlistModal();
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Arriving from login/signup with ?autoOpen=waitlist opens the next step.
   useEffect(() => {
     const autoOpen = searchParams.get("autoOpen");
     if (autoOpen !== "waitlist") return;
@@ -60,69 +63,100 @@ export function DemoCard() {
     url.searchParams.delete("autoOpen");
     router.replace(url.pathname + url.search);
   }, [searchParams, user, isAuthLoading, openModal, openPrompt, router]);
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<BlobPart[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
+  // Elapsed recording time.
+  useEffect(() => {
+    if (phase !== "recording") return;
+    const id = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  // Release the microphone, socket and audio URL when leaving the page.
+  useEffect(() => {
+    return () => {
+      mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+      wsRef.current?.close();
+    };
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
+
+  const resetResult = () => {
+    setOriginalText("");
+    setTranslatedText("");
+    setAudioUrl(null);
+    setErrorDetail("");
+  };
 
   const startRecording = async () => {
     if (!user) {
-      openPrompt();
+      promptJoinWaitlist({ redirectTo: "/demo", autoOpen: "waitlist" });
       return;
     }
     if (!isAllowed) {
       openModal("demo-gate");
       return;
     }
+    if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setErrorDetail("This browser can't record audio. Try a recent version of Chrome, Edge, Firefox or Safari.");
+      setPhase("error");
+      return;
+    }
 
+    resetResult();
+    setPhase("permission");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
-
-      mediaRecorderRef.current.onstop = () => {
+      recorder.onstop = () => {
         sendAudioToServer(new Blob(audioChunksRef.current, { type: "audio/webm" }));
       };
 
-      mediaRecorderRef.current.start();
-      setMicState("recording");
-      setOriginalText("Listening to your voice...");
-      setTranslatedText("");
-      setReceivedAudioUrl(null);
-      setIsPlaying(false);
+      recorder.start();
+      setElapsed(0);
+      setPhase("recording");
     } catch (err) {
       console.error("Error accessing microphone:", err);
-      alert("Please allow microphone access to use the demo.");
+      setPhase("denied");
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && micState === "recording") {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
-      setMicState("processing");
-      setOriginalText("Sending audio to Voxlate AI...");
-    }
-  };
-
-  const handleMicClick = () => {
-    if (micState === "recording") {
-      stopRecording();
-    } else {
-      startRecording();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && phase === "recording") {
+      recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
+      setPhase("processing");
     }
   };
 
   const sendAudioToServer = (audioBlob: Blob) => {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
-    const ws = new WebSocket(wsUrl);
+    const targetLanguage = language;
+    let settled = false;
+    const settle = (next: Phase, detail = "") => {
+      if (settled) return;
+      settled = true;
+      setErrorDetail(detail);
+      setPhase(next);
+    };
+
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch {
+      settle("disconnected");
+      return;
+    }
     wsRef.current = ws;
     ws.binaryType = "arraybuffer";
 
@@ -132,288 +166,215 @@ export function DemoCard() {
     };
 
     ws.onmessage = async (event) => {
-      if (typeof event.data === "string") {
-        if (event.data === "permitted") {
-          const buffer = await audioBlob.arrayBuffer();
-          ws.send(buffer);
-          ws.send(`lang: ${LANGUAGE_MAP[language]}`);
-        } else if (event.data === "denied") {
-          alert("Demo limit exceeded (Max 5 requests).");
-          setMicState("idle");
-          ws.close();
-        } else if (event.data === "error") {
-          alert("Server processing error.");
-          setMicState("idle");
-        } else if (event.data.trim().startsWith("{")) {
-          // FIX 2: Only parse if it's actually a JSON string, ignoring "closing connection"
-          try {
-            const payload = JSON.parse(event.data);
-            
-            if (payload.status === "success") {
-              setOriginalText(payload.original_text);
-              setTranslatedText(payload.translated_text);
-              
-              const byteCharacters = atob(payload.audio_base64);
-              const byteNumbers = new Array(byteCharacters.length);
-              for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-              }
-              const byteArray = new Uint8Array(byteNumbers);
-              const blob = new Blob([byteArray], { type: "audio/wav" });
-              
-              setReceivedAudioUrl(URL.createObjectURL(blob));
-              setMicState("completed");
+      if (typeof event.data !== "string") return;
+      if (event.data === "permitted") {
+        const buffer = await audioBlob.arrayBuffer();
+        ws.send(buffer);
+        ws.send(`lang: ${LANGUAGE_MAP[targetLanguage]}`);
+      } else if (event.data === "denied") {
+        settle("quota");
+        ws.close();
+      } else if (event.data === "error") {
+        settle("error", "The translation service couldn't process this recording.");
+      } else if (event.data.trim().startsWith("{")) {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.status === "success") {
+            setOriginalText(payload.original_text);
+            setTranslatedText(payload.translated_text);
+            setResultLanguage(targetLanguage);
+
+            const byteCharacters = atob(payload.audio_base64);
+            const byteArray = new Uint8Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteArray[i] = byteCharacters.charCodeAt(i);
             }
-          } catch (e) {
-            console.error("Failed to parse server message:", e);
+            setAudioUrl(URL.createObjectURL(new Blob([byteArray], { type: "audio/wav" })));
+            settle("result");
+          } else {
+            settle("error", "The translation service returned an unexpected response.");
           }
+        } catch (e) {
+          console.error("Failed to parse server message:", e);
+          settle("error", "The translation service returned an unreadable response.");
         }
       }
     };
 
-    ws.onclose = () => {
-      if (micState === "processing") {
-        setMicState("idle");
-      }
-    };
+    ws.onerror = () => settle("disconnected");
+    ws.onclose = () => settle("disconnected");
   };
 
-  const togglePlayback = () => {
-    if (audioPlayerRef.current) {
-      if (isPlaying) {
-        audioPlayerRef.current.pause();
-      } else {
-        audioPlayerRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
+  const busy = phase === "permission" || phase === "recording" || phase === "processing";
+  const gate: "ok" | "checking" | "signin" | "join" = isAuthLoading || (user && isGateLoading)
+    ? "checking"
+    : !user
+      ? "signin"
+      : !isAllowed
+        ? "join"
+        : "ok";
 
-  const showLockedOverlay = !isLoading && !isAllowed;
+  const statusText: Record<Phase, string> = {
+    idle: "Tap the microphone and start speaking. Press Stop when you’ve finished.",
+    permission: "Allow microphone access in your browser to continue.",
+    denied: "Microphone access was blocked. Allow it in your browser’s site settings, then try again.",
+    recording: "Listening… tap Stop when you’ve finished speaking.",
+    processing: "Recording sent. Translating and generating voice… this can take several seconds.",
+    result: "Translation ready.",
+    error: errorDetail || "Something went wrong while processing your recording.",
+    disconnected: "Couldn’t reach the translation service. It may be offline — please try again later.",
+    quota: `You’ve reached the demo limit for this account (${DEMO_LIMIT} translations).`,
+  };
+  const isProblem = phase === "denied" || phase === "error" || phase === "disconnected" || phase === "quota";
 
   return (
-    <section className="px-6 md:px-8 mb-12">
-      <div className="mx-auto max-w-[1200px]">
-        <div className="rounded-2xl border border-white/20 bg-[rgba(15,23,42,0.5)] backdrop-blur-md p-6 md:p-8 relative overflow-hidden shadow-[0_0_30px_rgba(59,130,246,0.25)]">
-          
-          {receivedAudioUrl && (
-            <audio 
-              ref={audioPlayerRef} 
-              src={receivedAudioUrl} 
-              onEnded={() => setIsPlaying(false)} 
-              onPause={() => setIsPlaying(false)}
-              onPlay={() => setIsPlaying(true)}
-              className="hidden" 
+    <section aria-labelledby="demo-tool-title" className="page-container">
+      <h2 id="demo-tool-title" className="sr-only">Translation tool</h2>
+      <div className="rounded-[18px] border border-line bg-surface">
+        {/* Controls */}
+        <div className="flex flex-col gap-4 border-b border-line p-5 sm:p-7 md:flex-row md:items-end md:justify-between">
+          <div className="w-full max-w-[320px]">
+            <LanguageSelect
+              id="demo-language"
+              label="1. Translate To"
+              value={language}
+              options={LANGUAGES}
+              onChange={setLanguage}
+              disabled={busy}
             />
-          )}
+          </div>
+          <p className="max-w-[46ch] text-[14px] leading-relaxed text-slate">
+            Your voice will be translated to {language}. Speak in your own language — the service transcribes your
+            recording and detects the language. Each account can run up to {DEMO_LIMIT} translations.
+          </p>
+        </div>
 
-          {showLockedOverlay && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[rgba(3,7,18,0.8)] backdrop-blur-sm">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/5">
-                <svg viewBox="0 0 24 24" width={32} height={32} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/70">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-              </div>
-              <div className="text-center px-6">
-                <p className="text-3xl font-bold text-white mb-2">VIP Treatment Only 👀</p>
-                <p className="text-xl text-[#94A3B8] mb-4">
-                  Join the waitlist → Demo unlocked 🔓 Free for you 'cause you're cute, charging everyone else though! 🤫❤️
-                </p>
-                <Button variant="primary-demo" onClick={() => {
-                  if (!user) {
-                    openPrompt();
-                  } else {
-                    openModal("demo-gate");
-                  }
-                }} className="mx-auto max-w-[500px] px-40 py-7 text-xl font-bold rounded-xl">
-                  Join Waitlist
-                </Button>
-              </div>
-            </div>
-          )}
+        <div className="grid md:grid-cols-2">
+          {/* Your speech */}
+          <div className="border-b border-line p-5 sm:p-7 md:border-b-0 md:border-r">
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-slate">2. Your speech · Tap &amp; Speak</h3>
 
-          <div className={`grid gap-8 lg:gap-12 lg:grid-cols-2 ${showLockedOverlay ? "blur-sm" : ""}`}>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] mb-2">
-                  1. Translate To
-                </label>
-                <div className="relative">
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    disabled={micState !== "idle" && micState !== "completed"}
-                    className="w-full appearance-none rounded-lg border border-white/20 bg-[rgba(2,6,23,0.6)] px-4 py-2.5 pr-10 text-sm text-white outline-none transition-colors focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 disabled:opacity-50"
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang} value={lang} className="bg-[#0F172A] text-white">
-                        {lang}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-                    <span className="text-sm">🌍</span>
-                    <ChevronDown size={16} className="text-[#94A3B8]" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] mb-4">
-                  2. Tap & Speak
-                </label>
-                <div className="relative flex flex-col items-center gap-4">
-                  <div className="relative flex items-center justify-center" style={{ width: 220, height: 120 }}>
-                    <div className="mic-waveform" aria-hidden="true">
-                      {Array.from({ length: 40 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="mic-waveform-bar"
-                          style={{
-                            height: mounted ? `${Math.random() * 100}%` : "50%",
-                            animationDelay: `${i * 0.05}s`,
-                            opacity: micState === "recording" ? 1 : 0.4,
-                          }}
-                        />
-                      ))}
-                    </div>
-
-                    <div className="relative">
-                      {micState === "recording" && (
-                        <>
-                          <div className="mic-ripple-ring" aria-hidden="true" />
-                          <div className="mic-ripple-ring-delayed" aria-hidden="true" />
-                        </>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={handleMicClick}
-                        disabled={micState === "processing" || showLockedOverlay}
-                        className={`relative flex h-[88px] w-[88px] items-center justify-center rounded-full text-white transition-transform hover:scale-105 disabled:opacity-70 ${showLockedOverlay ? "pointer-events-none opacity-50" : ""}`}
-                        style={{
-                          background: micState === "recording" ? "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" : "linear-gradient(135deg, #7C3AED 0%, #3B82F6 50%, #06B6D4 100%)",
-                          boxShadow: micState === "recording"
-                            ? "0 0 0 4px rgba(239, 68, 68, 0.25), 0 0 40px 10px rgba(239, 68, 68, 0.7)"
-                            : "0 0 0 3px rgba(6, 182, 212, 0.15), 0 0 30px 6px rgba(6, 182, 212, 0.5), 0 0 60px 15px rgba(124, 58, 237, 0.4), inset 0 0 15px rgba(6, 182, 212, 0.3)",
-                        }}
-                      >
-                        {micState === "processing" ? (
-                          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        ) : micState === "recording" ? (
-                          <div className="h-8 w-8 rounded-sm bg-white" style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.6))" }} />
-                        ) : (
-                          <svg viewBox="0 0 24 24" width={32} height={32} fill="currentColor" style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.6))" }} aria-hidden="true">
-                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="currentColor" />
-                            <line x1="12" x2="12" y1="19" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="text-center">
-                    <p className="text-sm text-white">
-                      {micState === "processing"
-                        ? "Translating and cloning voice..."
-                        : micState === "recording"
-                        ? "Listening... Tap to stop"
-                        : showLockedOverlay
-                        ? "Join the waitlist to start"
-                        : "Tap the microphone and start speaking"}
+            {gate !== "ok" ? (
+              <div className="mt-6 rounded-[12px] bg-mist p-5">
+                {gate === "checking" ? (
+                  <p className="flex items-center gap-2 text-[15px] text-ink" role="status">
+                    <Loader2 size={16} className="animate-spin" aria-hidden /> Checking demo access…
+                  </p>
+                ) : (
+                  <>
+                    <p className="flex items-center gap-2 text-[16px] font-semibold text-ink">
+                      <Lock size={16} aria-hidden />
+                      Join the waitlist → Demo unlocked
                     </p>
-                    <p className="mt-1 text-xs text-[#94A3B8] italic">Your voice will be translated to {language}</p>
-                  </div>
-                </div>
+                    <p className="mt-2 text-[15px] leading-relaxed text-slate">
+                      {gate === "signin"
+                        ? "It's free for you. Log in or create an account, then join the waitlist."
+                        : "It's free for you. The demo unlocks as soon as you're on the list."}
+                    </p>
+                    <div className="mt-5">
+                      <Button
+                        onClick={() =>
+                          gate === "signin"
+                            ? promptJoinWaitlist({ redirectTo: "/demo", autoOpen: "waitlist" })
+                            : openModal("demo-gate")
+                        }
+                      >
+                        Join Waitlist
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
+            ) : (
+              <div className="mt-6">
+                <div className="flex flex-wrap items-center gap-4">
+                  {phase === "recording" ? (
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      className="inline-flex h-14 items-center gap-3 rounded-[12px] bg-ink px-6 text-[16px] font-semibold text-white transition-colors hover:bg-[#0f1d28]"
+                    >
+                      <Square size={16} fill="currentColor" aria-hidden />
+                      Stop recording
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={phase === "result" ? () => { resetResult(); setPhase("idle"); } : startRecording}
+                      disabled={phase === "permission" || phase === "processing" || phase === "quota"}
+                      className="inline-flex h-14 items-center gap-3 rounded-[12px] bg-primary px-6 text-[16px] font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {phase === "processing" ? (
+                        <Loader2 size={18} className="animate-spin" aria-hidden />
+                      ) : phase === "result" ? (
+                        <RotateCcw size={18} aria-hidden />
+                      ) : (
+                        <Mic size={18} aria-hidden />
+                      )}
+                      {phase === "processing" ? "Processing…" : phase === "result" ? "Record again" : "Start recording"}
+                    </button>
+                  )}
+                  {phase === "recording" && (
+                    <span className="flex items-center gap-2 font-mono text-[15px] text-ink" aria-label={`Recording time ${formatTime(elapsed)}`}>
+                      <span className="h-2.5 w-2.5 rounded-full bg-danger" aria-hidden />
+                      {formatTime(elapsed)}
+                    </span>
+                  )}
+                </div>
+
+                <p
+                  role="status"
+                  className={`mt-4 flex items-start gap-2 text-[15px] leading-relaxed ${isProblem ? "text-danger" : "text-slate"}`}
+                >
+                  {isProblem && <TriangleAlert size={16} className="mt-1 shrink-0" aria-hidden />}
+                  {statusText[phase]}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-8">
+              <p className="text-[13px] font-medium text-slate">What you said (original)</p>
+              <p className="mt-2 min-h-[3.5rem] text-[17px] leading-relaxed text-ink">
+                {originalText || <span className="text-slate">Your transcript will appear here.</span>}
+              </p>
+            </div>
+          </div>
+
+          {/* Translation */}
+          <div className="p-5 sm:p-7">
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-slate">
+              3. Translation · How They Will Hear You{resultLanguage && phase === "result" ? ` · ${resultLanguage}` : ""}
+            </h3>
+            <p className="mt-6 min-h-[3.5rem] text-[17px] leading-relaxed text-ink">
+              {translatedText || <span className="text-slate">The translated text returns here once processing finishes.</span>}
+            </p>
+
+            <div className="mt-8">
+              <p className="text-[13px] font-medium text-slate">Translated audio</p>
+              {audioUrl ? (
+                <audio controls src={audioUrl} className="mt-3 w-full">
+                  Your browser can&apos;t play this audio.
+                </audio>
+              ) : (
+                <p className="mt-2 text-[15px] text-slate">Playback appears when audio is returned.</p>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">
-                3. How They Will Hear You – Listen Now
-              </label>
-
-              <div className="rounded-xl border border-white/10 bg-[rgba(2,6,23,0.6)] p-4 transition-all duration-500"
-                   style={{ opacity: micState === "idle" && !showLockedOverlay ? 0.5 : 1 }}>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B] mb-2">
-                  Original (English)
-                </label>
-                <p className="text-sm text-white leading-relaxed">
-                  {originalText ? `"${originalText}"` : '""'}
-                </p>
-              </div>
-
-              <div className="flex justify-center">
-                <ChevronDown size={20} className="text-[#64748B]" />
-              </div>
-
-              <div className="rounded-xl border border-[#7C3AED]/25 bg-[rgba(2,6,23,0.6)] p-4 transition-all duration-500"
-                   style={{ opacity: micState === "completed" ? 1 : 0.5 }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
-                    How They Will Hear You
-                  </label>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#06B6D4]">{language}</span>
-                </div>
-                <p className="text-sm text-white leading-relaxed">
-                  {translatedText || "..."}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={togglePlayback}
-                  disabled={micState !== "completed" || showLockedOverlay}
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#7C3AED] text-white transition-transform hover:scale-105 disabled:opacity-50 ${showLockedOverlay ? "pointer-events-none" : ""}`}
-                >
-                  {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
-                </button>
-                <div className="flex-1 flex items-center gap-[2px] h-8">
-                  {Array.from({ length: 40 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 rounded-full transition-all duration-300"
-                      style={{
-                        height: mounted ? `${Math.random() * 100}%` : "50%",
-                        backgroundColor: isPlaying && i < 15 ? "#22D3EE" : "rgba(148,163,184,0.3)",
-                      }}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs text-[#64748B] font-mono w-10 text-right">{duration}</span>
-              </div>
-
-              <div className="border-t border-white/10 pt-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#6366F1]/60 bg-[#6366F1]/10">
-                      <Star className="h-5 w-5 text-[#6366F1]" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-white">Enjoying the demo?</h3>
-                      <p className="mt-1 text-xs text-[#94A3B8]">
-                        Get early access to Voxlate Digital and experience seamless real-time conversations in any language.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="primary-demo"
-                    onClick={() => {
-                      window.dispatchEvent(new Event("review:open-form"));
-                      const el = document.getElementById("review-form-section");
-                      if (el) {
-                        el.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }
-                    }}
-                    className="font-bold"
-                  >
-                    Leave a Review
-                  </Button>
-                </div>
-              </div>
+            <div className="mt-8 border-t border-line pt-5">
+              <h4 className="text-[15px] font-semibold text-ink">Enjoying the demo?</h4>
+              <p className="mt-1 text-[14px] leading-relaxed text-slate">
+                Get early access to Voxlate Digital and experience seamless real-time conversations across languages.
+              </p>
+              <button
+                type="button"
+                className="text-link mt-3 text-[15px]"
+                onClick={() => {
+                  window.dispatchEvent(new Event("review:open-form"));
+                  document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                Leave a Review
+              </button>
             </div>
           </div>
         </div>

@@ -3,30 +3,35 @@ import type { UseFormRegisterReturn } from "react-hook-form";
 type InputProps = {
   id: string;
   label: string;
-  placeholder: string;
   registration: UseFormRegisterReturn;
   error?: string;
-  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  hint?: string;
+  optional?: boolean;
+  type?: string;
+  autoComplete?: string;
+  placeholder?: string;
 };
 
-export function Input({ id, label, placeholder, registration, error, icon: Icon }: InputProps) {
+export function Input({ id, label, registration, error, hint, optional, type = "text", autoComplete, placeholder }: InputProps) {
+  const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
   return (
     <div>
-      <label htmlFor={id} className="sr-only">
+      <label htmlFor={id} className="field-label">
         {label}
+        {optional && <span className="ml-1.5 font-normal text-slate">(optional)</span>}
       </label>
-      <div className="relative">
-        {Icon && <Icon size={18} className="text-text-muted absolute top-1/2 left-3 -translate-y-1/2" />}
-        <input
-          id={id}
-          placeholder={placeholder}
-          className={`border rounded-input h-12 w-full bg-white pl-10 pr-4 text-sm outline-none transition-colors focus:border-orange focus:ring-2 focus:ring-orange/15 ${
-            error ? "border-danger" : "border-border"
-          }`}
-          {...registration}
-        />
-      </div>
-      {error && <p className="text-danger mt-1 text-sm">{error}</p>}
+      <input
+        id={id}
+        type={type}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+        className="field"
+        {...registration}
+      />
+      {hint && <p id={`${id}-hint`} className="field-hint">{hint}</p>}
+      {error && <p id={`${id}-error`} className="field-error">{error}</p>}
     </div>
   );
 }

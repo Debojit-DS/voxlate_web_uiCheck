@@ -1,10 +1,6 @@
-type Props = {
-  message: string;
-};
-
-export function AuthFormError({ message }: Props) {
+export function AuthFormError({ message }: { message: string }) {
   return (
-    <div className="rounded-input border border-danger bg-danger/5 px-4 py-3 text-sm text-danger">
+    <div role="alert" className="rounded-[10px] border border-danger bg-danger-tint px-4 py-3 text-[14px] text-danger">
       {message}
     </div>
   );

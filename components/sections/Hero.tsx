@@ -1,65 +1,115 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import { ArrowRight, Users, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { TypewriterText } from "@/components/ui/TypewriterText";
+import { UnderlineLink } from "@/components/ui/UnderlineLink";
 import { useGatedWaitlist } from "@/components/auth/useGatedWaitlist";
-import { useDemoTransition } from "@/components/transitions/useDemoTransition";
-import { TutorialModal } from "@/components/waitlist/TutorialModal";
+import { TutorialButton } from "@/components/waitlist/TutorialButton";
+import { HeroRibbon, RIBBON_WORDS } from "./HeroRibbon";
+import styles from "./Hero.module.css";
+
+const PHRASES = ["Speak Naturally.", "Hear Every Language."];
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState<boolean | null>(null);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const update = () => setMatches(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, [query]);
+  return matches;
+}
 
 export function Hero() {
-  const { openWaitlist } = useGatedWaitlist();
-  const { goToDemo } = useDemoTransition();
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const { openWaitlist, isAuthLoading } = useGatedWaitlist();
+  const sectionRef = useRef<HTMLElement>(null);
+  const [onScreen, setOnScreen] = useState(true);
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const compact = useMediaQuery("(max-width: 899px)");
+
+  // Stop all hero animation work while the section is off screen.
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // null = not hydrated yet (or no JS): show the static pairs instead of the artwork.
+  const motionReady = reduced === false && compact !== null;
+  const running = motionReady && onScreen;
 
   return (
-    <section id="home" className="bg-bg-page pt-12 pb-16 md:pt-16 md:pb-20">
-      <div className="mx-auto max-w-[1200px] px-6 md:px-8">
-        <div className="grid items-center gap-12 md:grid-cols-2">
-          <div className="max-w-xl">
-            <div className="mb-4">
-              <h1 className="text-4xl font-bold leading-tight text-text-primary md:text-5xl">
-                Breaking Language Barriers.
-              </h1>
-              <h2 className="mt-2 text-2xl font-bold text-text-primary md:text-3xl">
-                Speak Naturally. Hear Every Language.
-              </h2>
-            </div>
-            <p className="mt-4 text-base text-text-secondary md:text-lg">
-              Real-time AI translation that preserves your original voice, tone and emotion.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button variant="primary-orange" onClick={() => openWaitlist("hero")} icon={ArrowRight}>
-                Join Waitlist
-              </Button>
-              <Button variant="primary-demo" onClick={goToDemo}>
-                View Our Demo
-              </Button>
-              <Button variant="outline-navy" onClick={() => setIsTutorialOpen(true)} icon={Play}>
-                Watch Tutorial
-              </Button>
-            </div>
-            <div className="mt-4 flex items-center gap-2 text-text-muted">
-              <Users size={16} />
-              <p className="text-sm">
-                Join the waitlist today and get a chance to become one of our early product testers before the official launch.
-              </p>
-            </div>
-          </div>
-          <div>
-            <Image
-              src="/images/hero-laptop.png"
-              alt="AI translation interface on a laptop"
-              width={600}
-              height={400}
-              className="w-full max-w-[600px] h-auto object-contain"
-              loading="eager"
-            />
-          </div>
+    <section ref={sectionRef} aria-labelledby="hero-title" className={styles.hero}>
+      <div className={`page-container ${styles.content}`}>
+        <p className="eyebrow">Voxlate · Early access</p>
+        <h1 id="hero-title" className={`${styles.title} font-display font-normal text-ink`}>
+          Breaking Language <em className="block italic">Barriers.</em>
+        </h1>
+
+        <p className={`${styles.tagline} font-medium text-primary`}>
+          <span className="sr-only">Speak Naturally. Hear Every Language.</span>
+          <TypewriterText phrases={PHRASES} speed={70} waitTime={1800} deleteSpeed={40} cursorChar="_" paused={!running} />
+        </p>
+
+        <p className={`${styles.description} text-slate`}>
+          We&apos;re building real-time AI translation designed to preserve your original voice, tone and emotion.
+        </p>
+
+        <div className={styles.actions}>
+          <Button onClick={() => openWaitlist("hero")} loading={isAuthLoading} wide>
+            Join Waitlist
+          </Button>
+          <UnderlineLink href="/demo" variant="goes-out-comes-in" direction="right" className="text-[15px] font-semibold">
+            View Our Demo
+          </UnderlineLink>
+          <TutorialButton label="Watch Tutorial" />
         </div>
+        <p className={`${styles.invitation} text-slate`}>
+          Join the waitlist today and get a chance to become one of our early product testers before the official launch.
+        </p>
       </div>
-      <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+
+      <figure className={styles.ribbonFigure} aria-labelledby="ribbon-caption">
+        <p id="ribbon-description" className="sr-only">
+          Illustration: words in {RIBBON_WORDS.map((word) => word.language).join(", ")} flow one after another into a
+          Voxlate capsule and come out as English.
+        </p>
+        <div className={`${styles.ribbonStage} ${motionReady ? "" : styles.staticStage}`}>
+          {motionReady && <HeroRibbon running={running} compact={!!compact} />}
+          <ul
+            className={
+              motionReady
+                ? "sr-only"
+                : styles.fallback
+            }
+          >
+            {RIBBON_WORDS.map((w) => (
+              <li
+                key={w.lang}
+                className="inline-flex items-center gap-2 rounded-full border border-line bg-surface py-1.5 pl-4 pr-1.5 text-[15px]"
+              >
+                <span lang={w.lang} dir={w.lang === "ar" ? "rtl" : "ltr"} className="font-[family-name:var(--font-indic)] text-ink">
+                  {w.source}
+                </span>
+                <span className="sr-only"> ({w.language}) means </span>
+                <span aria-hidden="true" className="text-slate">→</span>
+                <span className="rounded-full bg-primary px-3 py-0.5 font-medium text-white">{w.english}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <figcaption className={`page-container ${styles.caption}`}>
+          <span id="ribbon-caption" className={`${styles.captionLabel} text-slate`}>
+            Illustrative translation
+          </span>
+
+        </figcaption>
+      </figure>
     </section>
   );
 }

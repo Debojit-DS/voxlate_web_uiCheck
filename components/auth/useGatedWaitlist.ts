@@ -13,9 +13,9 @@ export function useGatedWaitlist() {
     if (!isLoading && user) {
       openModal(source ?? "navbar");
     } else {
-      openPrompt();
+      openPrompt({ redirectTo: window.location.pathname });
     }
   };
 
-  return { openWaitlist, isAuthenticated: !isLoading && !!user, logout };
+  return { openWaitlist, isAuthenticated: !isLoading && !!user, isAuthLoading: isLoading, logout };
 }

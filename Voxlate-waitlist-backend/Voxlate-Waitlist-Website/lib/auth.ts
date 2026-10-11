@@ -100,10 +100,10 @@ export async function attachSessionCookie(
   const token = await signSession(user);
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    domain: ".voxlatesn.in",
+    domain: process.env.NODE_ENV === "production" ? ".voxlatesn.in" : undefined,
     maxAge: SESSION_DURATION_SECONDS,
   });
 }
@@ -111,10 +111,10 @@ export async function attachSessionCookie(
 export function clearSessionCookie(res: NextResponse) {
   res.cookies.set(SESSION_COOKIE, "", {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    domain: ".voxlatesn.in",
+    domain: process.env.NODE_ENV === "production" ? ".voxlatesn.in" : undefined,
     maxAge: 0,
   });
 }

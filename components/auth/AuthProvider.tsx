@@ -71,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    // Clear the session cookie too; otherwise the next page load restores the session.
+    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
   };
 
   const updatePhoto = (photoUrl: string) => {

@@ -3,22 +3,47 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X, User, Mail, Building2, CheckCircle2, Upload } from "lucide-react";
+import { SquareCheck, User } from "lucide-react";
 import { checkWaitlistStatus, submitToWaitlist, syncWaitlistPhoto } from "@/lib/waitlistApi";
 import { uploadPhoto } from "@/lib/uploadApi";
 import { waitlistSchema, type WaitlistFormValues } from "@/lib/validation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { useWaitlistModal } from "@/components/waitlist/WaitlistModalProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
+import type { UseFormRegisterReturn } from "react-hook-form";
+
+function Choice({ registration, value, label }: { registration: UseFormRegisterReturn; value: string; label: string }) {
+  return (
+    <label className="cursor-pointer">
+      <input type="radio" value={value} {...registration} className="peer sr-only" />
+      <span className="flex h-11 items-center justify-center rounded-[10px] border border-line-strong px-3 text-center text-[14px] font-medium text-ink transition-colors hover:bg-mist peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary">
+        {label}
+      </span>
+    </label>
+  );
+}
+
+function Done({ title, message, onClose }: { title: string; message: string; onClose: () => void }) {
+  return (
+    <div className="text-center" role="status">
+      <SquareCheck className="mx-auto mb-4 text-success" size={40} aria-hidden />
+      <p className="font-display text-[26px] leading-tight text-ink">{title}</p>
+      <p className="mt-2 text-[15px] text-slate">{message}</p>
+      <Button onClick={onClose} className="mt-6 w-full">
+        Done
+      </Button>
+    </div>
+  );
+}
 
 function WaitlistForm() {
-  const { closeModal } = useWaitlistModal();
+  const { closeModal, source } = useWaitlistModal();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [resultMessage, setResultMessage] = useState("");
+  const [result, setResult] = useState<{ title: string; message: string } | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
@@ -38,8 +63,8 @@ function WaitlistForm() {
       role: "",
       organization: "",
       type: "individual",
-      product: "digital",
-      source: "",
+      product: source?.startsWith("physical") ? "physical" : "digital",
+      source: source ?? "",
       photo: user?.photoUrl ?? "",
     },
     mode: "onBlur",
@@ -54,14 +79,12 @@ function WaitlistForm() {
       setValue("photo", "");
       return;
     }
-
     if (!file.type.startsWith("image/")) {
       setPhotoError("Please select an image file.");
       setPhotoPreview(null);
       setValue("photo", "");
       return;
     }
-
     if (file.size > 10 * 1024 * 1024) {
       setPhotoError("Image must be less than 10MB.");
       setPhotoPreview(null);
@@ -71,9 +94,9 @@ function WaitlistForm() {
 
     const reader = new FileReader();
     reader.onload = () => {
-      const result = reader.result as string;
-      setPhotoPreview(result);
-      setValue("photo", result);
+      const dataUrl = reader.result as string;
+      setPhotoPreview(dataUrl);
+      setValue("photo", dataUrl);
     };
     reader.readAsDataURL(file);
   };
@@ -93,152 +116,96 @@ function WaitlistForm() {
       photoUrl = uploaded.url;
     }
 
-    const result = await submitToWaitlist({ ...values, photo: photoUrl });
+    const response = await submitToWaitlist({ ...values, photo: photoUrl });
     setIsSubmitting(false);
 
-    if (result.status === "success") {
-      setSuccess(true);
-      setResultMessage(result.message);
+    if (response.status === "success") {
+      setResult({ title: "You're on the list!", message: response.message });
       window.dispatchEvent(new Event("waitlist:joined"));
-    } else if (result.code === "duplicate_email") {
-      setSuccess(true);
-      setResultMessage("Looks like you're already on the waitlist with this email!");
+    } else if (response.code === "duplicate_email") {
+      setResult({ title: "You're on the list!", message: "Looks like you're already on the waitlist with this email!" });
       window.dispatchEvent(new Event("waitlist:joined"));
-    } else if (result.code === "validation_error") {
-      setFormError(result.message || "Please check your inputs and try again.");
+    } else if (response.code === "validation_error") {
+      setFormError(response.message || "Please check your inputs and try again.");
     } else {
-      setFormError(result.message || "Something went wrong. Please try again.");
+      setFormError(response.message || "Something went wrong. Please try again.");
     }
   }
 
-  if (success) {
-    return (
-      <div className="text-center py-6">
-        <CheckCircle2 className="mx-auto text-success mb-4" size={48} />
-        <h3 className="text-2xl font-bold text-text-primary mb-2">You&apos;re on the list!</h3>
-        <p className="text-text-secondary text-sm mb-6">{resultMessage}</p>
-        <Button variant="primary-orange" onClick={closeModal} className="w-full">
-          Done
-        </Button>
-      </div>
-    );
-  }
+  if (result) return <Done title={result.title} message={result.message} onClose={closeModal} />;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
       {formError && (
-        <div className="rounded-input border border-danger bg-danger/5 px-4 py-3 text-sm text-danger">
+        <div role="alert" className="rounded-[10px] border border-danger bg-danger-tint px-4 py-3 text-[14px] text-danger">
           {formError}
         </div>
       )}
 
+      <Input id="wl-name" label="Full Name" autoComplete="name" registration={register("name")} error={errors.name?.message} />
+      <Input id="wl-email" label="Email Address" type="email" autoComplete="email" registration={register("email")} error={errors.email?.message} />
+      <Input id="wl-company" label="Organization Name" optional autoComplete="organization" registration={register("company")} error={errors.company?.message} />
       <Input
-        id="name"
-        label="Full Name"
-        placeholder="Full Name"
-        registration={register("name")}
-        error={errors.name?.message}
-        icon={User}
-      />
-
-      <Input
-        id="email"
-        label="Email Address"
-        placeholder="Email Address"
-        registration={register("email")}
-        error={errors.email?.message}
-        icon={Mail}
-      />
-
-      <Input
-        id="company"
-        label="Organization Name (optional)"
-        placeholder="Organization Name (optional)"
-        registration={register("company")}
-        error={errors.company?.message}
-        icon={Building2}
-      />
-
-      <Input
-        id="role"
-        label="Enter your profession (optional)"
-        placeholder="Enter your profession (optional) [eg:student, professor,etc]"
+        id="wl-role"
+        label="Your profession"
+        optional
+        hint="For example: student, professor, etc."
+        autoComplete="organization-title"
         registration={register("role")}
         error={errors.role?.message}
       />
 
       {!hasExistingPhoto && (
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">Hiding that cute smile should be illegal 😌 Come on, let the world see it—add a profile photo! 👀✨</label>
+          <label htmlFor="wl-photo" className="field-label">
+            Hiding that cute smile should be illegal — come on, let the world see it: add a profile photo!{" "}
+            <span className="font-normal text-slate">(optional)</span>
+          </label>
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 shrink-0 rounded-full border border-border bg-bg-surface-alt overflow-hidden flex items-center justify-center">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-mist">
               {photoPreview ? (
-                <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                <img src={photoPreview} alt="Selected photo preview" className="h-full w-full object-cover" />
               ) : (
-                <User className="text-text-muted" size={24} />
+                <User className="text-slate" size={22} aria-hidden />
               )}
-            </div>
-            <div className="flex-1">
-              <input
-                id="photo"
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-input file:border-0 file:text-sm file:font-medium file:bg-bg-surface-alt file:text-text-primary hover:file:bg-border"
-              />
-              {photoError && <p className="text-danger mt-1 text-sm">{photoError}</p>}
-              {errors.photo && <p className="text-danger mt-1 text-sm">{errors.photo.message}</p>}
-              <p className="text-xs text-text-muted mt-1">Max 10MB. JPG, PNG, or WebP.</p>
-            </div>
+            </span>
+            <input
+              id="wl-photo"
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              aria-describedby="wl-photo-hint"
+              className="block w-full text-[14px] text-slate file:mr-3 file:h-10 file:cursor-pointer file:rounded-[10px] file:border file:border-line-strong file:bg-surface file:px-4 file:text-[14px] file:font-medium file:text-ink hover:file:bg-mist"
+            />
           </div>
+          <p id="wl-photo-hint" className="field-hint">
+            Max 10MB. JPG, PNG, or WebP. Shown beside your name in the public waitlist directory.
+          </p>
+          {photoError && <p className="field-error">{photoError}</p>}
+          {errors.photo && <p className="field-error">{errors.photo.message}</p>}
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-text-primary mb-2">I&apos;m signing up as</label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="cursor-pointer">
-            <input type="radio" value="individual" {...register("type")} className="sr-only peer" />
-          <div className="rounded-input border border-border px-4 py-2.5 text-center text-sm font-bold text-text-primary peer-checked:border-orange peer-checked:bg-orange peer-checked:text-white transition-colors">
-                Individual
-              </div>
-            </label>
-            <label className="cursor-pointer">
-              <input type="radio" value="business" {...register("type")} className="sr-only peer" />
-              <div className="rounded-input border border-border px-4 py-2.5 text-center text-sm font-bold text-text-primary peer-checked:border-orange peer-checked:bg-orange peer-checked:text-white transition-colors">
-                Business
-            </div>
-          </label>
+      <fieldset>
+        <legend className="field-label">I&apos;m signing up as</legend>
+        <div className="grid grid-cols-2 gap-2">
+          <Choice registration={register("type")} value="individual" label="Individual" />
+          <Choice registration={register("type")} value="business" label="Business" />
         </div>
-        </div>
+      </fieldset>
 
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">I&apos;m waitlisting for</label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <label className="cursor-pointer">
-              <input type="radio" value="digital" {...register("product")} className="sr-only peer" />
-              <div className="rounded-input border border-border px-4 py-2.5 text-center text-sm font-bold text-text-primary peer-checked:border-orange peer-checked:bg-orange peer-checked:text-white transition-colors">
-                Digital version
-              </div>
-            </label>
-            <label className="cursor-pointer">
-              <input type="radio" value="physical" {...register("product")} className="sr-only peer" />
-              <div className="rounded-input border border-border px-4 py-2.5 text-center text-sm font-bold text-text-primary peer-checked:border-orange peer-checked:bg-orange peer-checked:text-white transition-colors whitespace-nowrap">
-                Physical version
-              </div>
-            </label>
-            <label className="cursor-pointer">
-              <input type="radio" value="both" {...register("product")} className="sr-only peer" />
-              <div className="rounded-input border border-border px-4 py-2.5 text-center text-sm font-bold text-text-primary peer-checked:border-orange peer-checked:bg-orange peer-checked:text-white transition-colors whitespace-nowrap">
-                Both
-              </div>
-            </label>
-          </div>
-          {errors.product && <p className="text-danger mt-1 text-sm">{errors.product.message}</p>}
+      <fieldset>
+        <legend className="field-label">I&apos;m waitlisting for</legend>
+        <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-3">
+          <Choice registration={register("product")} value="digital" label="Digital version" />
+          <Choice registration={register("product")} value="physical" label="Physical version" />
+          <Choice registration={register("product")} value="both" label="Both" />
         </div>
+        {errors.product && <p className="field-error">{errors.product.message}</p>}
+      </fieldset>
 
-        <Button variant="primary-orange" type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Joining..." : "Join Waitlist"}
+      <Button type="submit" className="w-full" loading={isSubmitting}>
+        {isSubmitting ? "Joining…" : "Join Waitlist"}
       </Button>
     </form>
   );
@@ -273,75 +240,22 @@ export function WaitlistModal() {
     };
   }, [isOpen, user?.email, user?.photoUrl]);
 
-  if (!isOpen) return null;
-
-  if (isChecking) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-navy-cta/50" onClick={closeModal} />
-        <div className="relative z-10 w-full max-w-[480px] rounded-modal bg-accent-blue-light p-8 shadow-lg border border-border">
-          <button
-            type="button"
-            onClick={closeModal}
-            className="absolute top-4 right-4 text-text-muted hover:text-text-primary"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
-          <div className="text-center py-6">
-            <p className="text-text-secondary text-sm">Checking waitlist status...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (hasJoined) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-navy-cta/50" onClick={closeModal} />
-        <div className="relative z-10 w-full max-w-[480px] rounded-modal bg-accent-blue-light p-8 shadow-lg border border-border">
-          <button
-            type="button"
-            onClick={closeModal}
-            className="absolute top-4 right-4 text-text-muted hover:text-text-primary"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
-          <div className="text-center py-6">
-            <CheckCircle2 className="mx-auto text-success mb-4" size={48} />
-            <h3 className="text-2xl font-bold text-text-primary mb-2">You&apos;re already on the list!</h3>
-            <p className="text-text-secondary text-sm mb-6">We&apos;ll notify you when Voxlate launches.</p>
-            <Button variant="primary-orange" onClick={closeModal} className="w-full">
-              Done
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-navy-cta/50" onClick={closeModal} />
-      <div className="relative z-10 w-full max-w-[480px] max-h-[90dvh] overflow-y-auto rounded-modal bg-accent-blue-light p-8 shadow-lg border border-border">
-        <button
-          type="button"
-          onClick={closeModal}
-          className="absolute top-4 right-4 text-text-muted hover:text-text-primary"
-          aria-label="Close"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="mb-6">
-          <h3 className="text-2xl font-bold text-text-primary">Join the Voxlate Waitlist</h3>
-          <p className="mt-2 text-sm font-semibold text-text-primary">Be first in line. Get notified the moment Voxlate launches.</p>
-        </div>
-
+    <Modal
+      open={isOpen}
+      onClose={closeModal}
+      title={hasJoined && !isChecking ? "You're already on the list!" : "Join the Voxlate Waitlist"}
+      description={isChecking || hasJoined ? undefined : "Be first in line. Get notified the moment Voxlate launches."}
+    >
+      {isChecking ? (
+        <p role="status" className="py-4 text-[15px] text-slate">
+          Checking waitlist status…
+        </p>
+      ) : hasJoined ? (
+        <Done title="You're on the list!" message="We'll notify you when Voxlate launches. The web demo is unlocked for your account." onClose={closeModal} />
+      ) : (
         <WaitlistForm />
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }

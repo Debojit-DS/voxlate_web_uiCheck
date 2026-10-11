@@ -1,0 +1,1 @@
+These renamed OFL font subsets are for hero illustration words only. Japanese (夢) and Simplified Chinese (朋友) come from installed Noto Sans CJK Regular; Arabic (سلام) comes from installed Noto Sans Arabic Regular. GSUB/GPOS shaping tables and license metadata are retained. Expand these subsets if the illustration vocabulary changes. See the bundled copyright/license files.
