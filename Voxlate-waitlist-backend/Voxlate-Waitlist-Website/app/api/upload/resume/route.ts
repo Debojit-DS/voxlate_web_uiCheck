@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       return withCorrelationId(withSecurityHeaders(withCors(res)), generateCorrelationId());
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (!file.size || file.size > 10 * 1024 * 1024) {
       const res = NextResponse.json(
         { status: "error", code: "validation_error", message: "File size must be less than 10MB." },
         { status: 400 }
@@ -51,6 +51,16 @@ export async function POST(req: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    if (buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
+      return withSecurityHeaders(NextResponse.json({ status: "error", code: "validation_error", message: "Please upload a valid PDF resume." }, { status: 400 }));
+    }
+    const configured = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"].every((key) => {
+      const value = process.env[key];
+      return !!value && !/^your-|change-me|<.*>/.test(value);
+    });
+    if (!configured) {
+      return withSecurityHeaders(NextResponse.json({ status: "error", code: "service_unavailable", message: "Resume uploads are temporarily unavailable. Please try again later." }, { status: 503 }));
+    }
 
     const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
       cloudinary.uploader.upload_stream(

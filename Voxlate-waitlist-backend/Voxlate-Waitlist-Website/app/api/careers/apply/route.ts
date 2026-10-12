@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 
 const applicationSchema = z.object({
-  fullName: z.string().trim().min(1).max(120), email: z.string().email().max(254),
+  fullName: z.string().trim().min(1).max(120), email: z.string().trim().email().max(254).toLowerCase(),
   contactNumber: z.string().trim().min(1).max(50), college: z.string().trim().min(1).max(250),
   currentYear: z.string().trim().min(1).max(50), roleAppliedFor: z.string().trim().min(1).max(250),
   strongestSkills: z.string().trim().min(1).max(10000), motivation: z.string().trim().min(1).max(10000),
@@ -46,11 +46,10 @@ export async function POST(req: NextRequest) {
       data: { id: application.id },
     });
     return withCorrelationId(withSecurityHeaders(withCors(res)), generateCorrelationId());
-  } catch (err) {
-    console.error("Job application submission error", err);
+  } catch {
     const res = NextResponse.json(
-      { status: "error", code: "server_error", message: "Failed to submit application." },
-      { status: 500 }
+      { status: "error", code: "service_unavailable", message: "Applications are temporarily unavailable. Please try again later." },
+      { status: 503 }
     );
     return withCorrelationId(withSecurityHeaders(withCors(res)), generateCorrelationId());
   }
