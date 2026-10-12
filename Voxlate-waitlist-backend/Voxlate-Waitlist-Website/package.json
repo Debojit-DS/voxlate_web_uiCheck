@@ -16,7 +16,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate",
-    "test:integration": "tsx --test tests/auth-session.test.ts"
+    "test:integration": "tsx --test tests/*.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
