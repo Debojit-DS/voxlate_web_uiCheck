@@ -2,9 +2,9 @@
 
 @theme {
   /* Surfaces */
-  --color-page: #F6F8FA;
+  --color-page: #F7F8FA;
   --color-surface: #FFFFFF;
-  --color-mist: #E8EFF3;
+  --color-mist: #EDF1F4;
   --color-stone: #E8E5DE;
 
   /* Brand */
@@ -16,7 +16,7 @@
   --color-slate: #5A6872;
 
   /* Lines: `line` is decorative, `line-strong` meets 3:1 for control borders */
-  --color-line: #D7E0E5;
+  --color-line: #CCD6DE;
   --color-line-strong: #7D8E99;
 
   /* Accents and status */
@@ -34,8 +34,8 @@
     var(--font-noto-chinese), system-ui, sans-serif;
 
   /* Radius */
-  --radius-control: 6px;
-  --radius-panel: 10px;
+  --radius-control: 4px;
+  --radius-panel: 8px;
 }
 
 html {
@@ -119,21 +119,11 @@ body {
   .status-tag {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    border: 1px solid var(--color-line);
-    background: var(--color-surface);
-    border-radius: 2px;
-    padding: 4px 12px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
-    color: var(--color-ink);
-  }
-  .status-tag::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 2px;
-    background: var(--color-sage);
+    line-height: 1.5;
+    color: var(--color-slate);
+    letter-spacing: 0.02em;
   }
 
   .field {
@@ -146,7 +136,7 @@ body {
     padding: 10px 14px;
     font-size: 15px;
     color: var(--color-ink);
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+    transition: border-color 150ms ease;
   }
   .field::placeholder {
     color: #7D8E99;
@@ -154,7 +144,8 @@ body {
   .field:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgb(40 90 120 / 0.18);
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
   .field[aria-invalid="true"] {
     border-color: var(--color-danger);
@@ -273,21 +264,24 @@ body {
 .underline-link[data-variant="center"] {
   --ul-pos: center bottom 0;
 }
-.underline-link[data-variant="center"]:is(:hover, :focus-visible) {
+.underline-link[data-variant="center"]:is(:hover, :focus-visible),
+.underline-link-target:is(:hover, :focus-visible) .underline-link[data-variant="center"] {
   --ul-size: 100% 1px;
 }
 /* comes-in-goes-out: enters from `direction`, leaves toward the opposite side */
 .underline-link[data-variant="comes-in-goes-out"][data-direction="left"] {
   --ul-pos: right 0 bottom 0;
 }
-.underline-link[data-variant="comes-in-goes-out"][data-direction="left"]:is(:hover, :focus-visible) {
+.underline-link[data-variant="comes-in-goes-out"][data-direction="left"]:is(:hover, :focus-visible),
+.underline-link-target:is(:hover, :focus-visible) .underline-link[data-variant="comes-in-goes-out"][data-direction="left"] {
   --ul-pos: left 0 bottom 0;
   --ul-size: 100% 1px;
 }
 .underline-link[data-variant="comes-in-goes-out"][data-direction="right"] {
   --ul-pos: left 0 bottom 0;
 }
-.underline-link[data-variant="comes-in-goes-out"][data-direction="right"]:is(:hover, :focus-visible) {
+.underline-link[data-variant="comes-in-goes-out"][data-direction="right"]:is(:hover, :focus-visible),
+.underline-link-target:is(:hover, :focus-visible) .underline-link[data-variant="comes-in-goes-out"][data-direction="right"] {
   --ul-pos: right 0 bottom 0;
   --ul-size: 100% 1px;
 }
@@ -295,10 +289,12 @@ body {
 .underline-link[data-variant="goes-out-comes-in"] {
   --ul-size: 100% 1px;
 }
-.underline-link[data-variant="goes-out-comes-in"][data-direction="left"]:is(:hover, :focus-visible) {
+.underline-link[data-variant="goes-out-comes-in"][data-direction="left"]:is(:hover, :focus-visible),
+.underline-link-target:is(:hover, :focus-visible) .underline-link[data-variant="goes-out-comes-in"][data-direction="left"] {
   animation: ul-out-in-left 420ms ease both;
 }
-.underline-link[data-variant="goes-out-comes-in"][data-direction="right"]:is(:hover, :focus-visible) {
+.underline-link[data-variant="goes-out-comes-in"][data-direction="right"]:is(:hover, :focus-visible),
+.underline-link-target:is(:hover, :focus-visible) .underline-link[data-variant="goes-out-comes-in"][data-direction="right"] {
   animation: ul-out-in-right 420ms ease both;
 }
 @keyframes ul-out-in-left {
@@ -329,9 +325,10 @@ body {
   width: 8px;
   height: 8px;
   margin-top: -4px;
-  border-radius: 999px;
+  border-radius: 0;
+  opacity: 0;
   background: rgb(255 255 255 / 0.75);
-  transition: transform 280ms ease, background-color 280ms ease;
+  transition: transform 280ms ease, background-color 280ms ease, opacity 150ms ease;
 }
 .ihb-label {
   display: inline-flex;
@@ -352,6 +349,7 @@ body {
   transition: transform 280ms ease, opacity 200ms ease;
 }
 .ihb:is(:hover, :focus-visible):not(:disabled):not([aria-disabled="true"]) .ihb-dot {
+  opacity: 1;
   transform: scale(60);
   background: var(--color-primary-hover);
 }

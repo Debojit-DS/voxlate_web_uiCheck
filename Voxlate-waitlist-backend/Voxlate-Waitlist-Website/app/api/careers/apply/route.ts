@@ -1,49 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withCors, withCorrelationId, withSecurityHeaders } from "@/lib/cors";
 import { generateCorrelationId } from "@/lib/correlationId";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
+
+const applicationSchema = z.object({
+  fullName: z.string().trim().min(1).max(120), email: z.string().email().max(254),
+  contactNumber: z.string().trim().min(1).max(50), college: z.string().trim().min(1).max(250),
+  currentYear: z.string().trim().min(1).max(50), roleAppliedFor: z.string().trim().min(1).max(250),
+  strongestSkills: z.string().trim().min(1).max(10000), motivation: z.string().trim().min(1).max(10000),
+  projectDetails: z.string().max(10000).nullish(), proposedIdea: z.string().trim().min(1).max(10000),
+  uniqueEdge: z.string().trim().min(1).max(10000), portfolioLinks: z.string().max(2000).nullish(),
+  resumeUrl: z.string().url().refine((url) => url.startsWith("https://")),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-
-    const {
-      fullName,
-      email,
-      contactNumber,
-      college,
-      currentYear,
-      roleAppliedFor,
-      strongestSkills,
-      motivation,
-      projectDetails,
-      proposedIdea,
-      uniqueEdge,
-      portfolioLinks,
-      resumeUrl,
-    } = body as {
-      fullName: string;
-      email: string;
-      contactNumber: string;
-      college: string;
-      currentYear: string;
-      roleAppliedFor: string;
-      strongestSkills: string;
-      motivation: string;
-      projectDetails?: string;
-      proposedIdea: string;
-      uniqueEdge: string;
-      portfolioLinks?: string;
-      resumeUrl: string;
-    };
-
-    if (!fullName || !email || !contactNumber || !college || !currentYear || !roleAppliedFor || !strongestSkills || !motivation || !proposedIdea || !uniqueEdge || !resumeUrl) {
-      const res = NextResponse.json(
-        { status: "error", code: "validation_error", message: "All required fields must be provided." },
-        { status: 400 }
-      );
-      return withCorrelationId(withSecurityHeaders(withCors(res)), generateCorrelationId());
+    const parsed = applicationSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return withSecurityHeaders(NextResponse.json({ status: "error", code: "validation_error", message: "Please check the required fields, email address, and uploaded resume." }, { status: 400 }));
     }
+    const { fullName, email, contactNumber, college, currentYear, roleAppliedFor, strongestSkills,
+      motivation, projectDetails, proposedIdea, uniqueEdge, portfolioLinks, resumeUrl } = parsed.data;
 
     const application = await prisma.jobApplication.create({
       data: {

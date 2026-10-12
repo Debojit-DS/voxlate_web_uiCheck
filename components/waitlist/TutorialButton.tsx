@@ -11,12 +11,12 @@ export function TutorialButton({ label = "Watch the tutorial video" }: { label?:
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink hover:text-primary">
+      <button type="button" onClick={() => setOpen(true)} className="underline-link-target inline-flex items-center gap-2 text-[15px] font-semibold text-ink hover:text-primary">
         <SquarePlay size={18} aria-hidden className="text-primary" />
         <span className="underline-link" data-variant="center">{label}</span>
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Voxlate tutorial" size="lg">
-        <div className="relative w-full overflow-hidden rounded-[12px] bg-mist" style={{ paddingTop: "56.25%" }}>
+        <div className="relative w-full overflow-hidden rounded-[6px] bg-mist" style={{ paddingTop: "56.25%" }}>
           <iframe
             src={VIDEO_SRC}
             allow="fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"

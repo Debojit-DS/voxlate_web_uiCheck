@@ -43,7 +43,10 @@ export function Modal({ open, onClose, title, description, children, size = "md"
       returnFocus.current?.focus();
     };
     dialog.addEventListener("close", handleClose);
-    return () => dialog.removeEventListener("close", handleClose);
+    return () => {
+      if (dialog.open) { dialog.close(); document.body.style.overflow = ""; }
+      dialog.removeEventListener("close", handleClose);
+    };
   }, []);
 
   return (
@@ -58,14 +61,14 @@ export function Modal({ open, onClose, title, description, children, size = "md"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className={`modal m-auto w-[calc(100%-32px)] ${widths[size]} max-h-[calc(100dvh-32px)] overflow-y-auto rounded-[18px] border border-line bg-surface p-0 text-ink shadow-[0_24px_60px_-20px_rgb(24_43_58/0.35)]`}
+      className={`modal m-auto w-[calc(100%-32px)] ${widths[size]} max-h-[calc(100dvh-32px)] overflow-y-auto rounded-[8px] border border-line bg-surface p-0 text-ink`}
     >
       {open && (
         <div className="relative p-6 sm:p-8">
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-[10px] text-slate transition-colors hover:bg-mist hover:text-ink"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-[6px] text-slate transition-colors hover:bg-mist hover:text-ink"
             aria-label="Close"
           >
             <X size={18} aria-hidden />

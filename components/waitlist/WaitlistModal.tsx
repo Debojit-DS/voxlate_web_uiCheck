@@ -18,7 +18,7 @@ function Choice({ registration, value, label }: { registration: UseFormRegisterR
   return (
     <label className="cursor-pointer">
       <input type="radio" value={value} {...registration} className="peer sr-only" />
-      <span className="flex h-11 items-center justify-center rounded-[10px] border border-line-strong px-3 text-center text-[14px] font-medium text-ink transition-colors hover:bg-mist peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary">
+      <span className="flex h-11 items-center justify-center rounded-[6px] border border-line-strong px-3 text-center text-[14px] font-medium text-ink transition-colors hover:bg-mist peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary">
         {label}
       </span>
     </label>
@@ -137,7 +137,7 @@ function WaitlistForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
       {formError && (
-        <div role="alert" className="rounded-[10px] border border-danger bg-danger-tint px-4 py-3 text-[14px] text-danger">
+        <div role="alert" className="rounded-[6px] border border-danger bg-danger-tint px-4 py-3 text-[14px] text-danger">
           {formError}
         </div>
       )}
@@ -175,7 +175,7 @@ function WaitlistForm() {
               accept="image/*"
               onChange={handlePhotoChange}
               aria-describedby="wl-photo-hint"
-              className="block w-full text-[14px] text-slate file:mr-3 file:h-10 file:cursor-pointer file:rounded-[10px] file:border file:border-line-strong file:bg-surface file:px-4 file:text-[14px] file:font-medium file:text-ink hover:file:bg-mist"
+              className="block w-full text-[14px] text-slate file:mr-3 file:h-10 file:cursor-pointer file:rounded-[6px] file:border file:border-line-strong file:bg-surface file:px-4 file:text-[14px] file:font-medium file:text-ink hover:file:bg-mist"
             />
           </div>
           <p id="wl-photo-hint" className="field-hint">
@@ -216,16 +216,21 @@ export function WaitlistModal() {
   const { user } = useAuth();
   const [isChecking, setIsChecking] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
+  const [checkError, setCheckError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (!isOpen || !user?.email) return;
 
     let cancelled = false;
-    setIsChecking(true);
-    setHasJoined(false);
+    const timer = setTimeout(() => {
+      setIsChecking(true);
+      setHasJoined(false);
+      setCheckError(false);
 
     checkWaitlistStatus(user.email).then(async (result) => {
       if (cancelled) return;
+      if (result.status === "error") setCheckError(true);
       if (result.status === "success" && result.data.joined) {
         setHasJoined(true);
         if (user.photoUrl) {
@@ -234,11 +239,13 @@ export function WaitlistModal() {
       }
       setIsChecking(false);
     });
+    }, 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [isOpen, user?.email, user?.photoUrl]);
+  }, [isOpen, user?.email, user?.photoUrl, retry]);
 
   return (
     <Modal
@@ -251,6 +258,11 @@ export function WaitlistModal() {
         <p role="status" className="py-4 text-[15px] text-slate">
           Checking waitlist status…
         </p>
+      ) : checkError ? (
+        <div role="status">
+          <p className="text-[15px] text-slate">We couldn&apos;t check your waitlist status. Please try again.</p>
+          <Button variant="secondary" className="mt-4" onClick={() => setRetry((value) => value + 1)}>Retry</Button>
+        </div>
       ) : hasJoined ? (
         <Done title="You're on the list!" message="We'll notify you when Voxlate launches. The web demo is unlocked for your account." onClose={closeModal} />
       ) : (

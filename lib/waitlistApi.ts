@@ -1,3 +1,4 @@
+import { apiRequest } from "./apiClient";
 import type { WaitlistFormValues } from "./validation";
 
 export type WaitlistResponse =
@@ -34,7 +35,7 @@ export type PublicWaitlistResponse = {
 
 export async function getPublicWaitlist(page = 1, pageSize = 20): Promise<PublicWaitlistResponse> {
   try {
-    const res = await fetch(`/api/waitlist?page=${page}&pageSize=${pageSize}`, {
+    const res = await apiRequest(`/api/waitlist?page=${page}&pageSize=${pageSize}`, {
       method: "GET",
       signal: AbortSignal.timeout(10_000),
     });
@@ -49,7 +50,7 @@ export async function getPublicWaitlist(page = 1, pageSize = 20): Promise<Public
     }
 
     const json = (await res.json()) as Partial<PublicWaitlistResponse>;
-    if (json.status !== "success" || !json.pagination) {
+    if (json.status !== "success" || !json.pagination || !Array.isArray(json.data)) {
       return {
         status: "success",
         data: [],
@@ -71,13 +72,15 @@ export async function getPublicWaitlist(page = 1, pageSize = 20): Promise<Public
 
 export async function submitToWaitlist(payload: WaitlistFormValues): Promise<WaitlistResponse> {
     try {
-    const res = await fetch("/api/waitlist", {
+    const res = await apiRequest("/api/waitlist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(10_000),
     });
-    return (await res.json()) as WaitlistResponse;
+    const data = await res.json();
+    if ((res.ok && data.status === "success" && typeof data.data?.id === "string") || (!res.ok && data.status === "error" && typeof data.message === "string")) return data;
+    throw new Error("Unexpected waitlist response");
   } catch {
     return { status: "error", code: "server_error", message: "Something went wrong." };
   }
@@ -85,11 +88,13 @@ export async function submitToWaitlist(payload: WaitlistFormValues): Promise<Wai
 
 export async function checkWaitlistStatus(email: string): Promise<WaitlistCheckResponse> {
   try {
-    const res = await fetch(`/api/waitlist?email=${encodeURIComponent(email)}`, {
+    const res = await apiRequest(`/api/waitlist?email=${encodeURIComponent(email)}`, {
       method: "GET",
       signal: AbortSignal.timeout(10_000),
     });
-    return (await res.json()) as WaitlistCheckResponse;
+    const data = await res.json();
+    if (res.ok && data.status === "success" && typeof data.data?.joined === "boolean") return data;
+    throw new Error("Unexpected waitlist status");
   } catch {
     return { status: "error", code: "server_error", message: "Something went wrong." };
   }
@@ -97,7 +102,7 @@ export async function checkWaitlistStatus(email: string): Promise<WaitlistCheckR
 
 export async function syncWaitlistPhoto(email: string, photo: string): Promise<void> {
   try {
-    await fetch("/api/waitlist/sync-photo", {
+    await apiRequest("/api/waitlist/sync-photo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, photo }),
@@ -107,16 +112,4 @@ export async function syncWaitlistPhoto(email: string, photo: string): Promise<v
   } catch {
     // ignore
   }
-}
-
-async function mockSubmitToWaitlist(payload: WaitlistFormValues): Promise<WaitlistResponse> {
-  await new Promise((r) => setTimeout(r, 800));
-  if (payload.email === "test@voxlate.com") {
-    return { status: "error", code: "duplicate_email", message: "This email is already on the waitlist." };
-  }
-  return {
-    status: "success",
-    message: "You have been added to the waitlist.",
-    data: { id: crypto.randomUUID(), email: payload.email, position: Math.floor(Math.random() * 2000) },
-  };
 }

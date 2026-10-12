@@ -10,9 +10,10 @@ import { logAuth } from "@/lib/logger";
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export async function POST(req: NextRequest) {
+  if (!process.env.GOOGLE_CLIENT_ID) return withSecurityHeaders(NextResponse.json({ status: "error", code: "service_unavailable", message: "Google sign-in isn't configured. Please use email and password." }, { status: 503 }));
   try {
-    const body = await req.json();
-    const { idToken } = body;
+    const body = await req.json().catch(() => null);
+    const idToken = body?.idToken;
     const ip = getClientIp(req);
     const rateLimitKey = `google:${ip}`;
     if (!checkGoogleRateLimit(rateLimitKey, 5, 60_000)) {
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       return withCorrelationId(withCors(res), correlationId);
     }
 
-    if (!idToken) {
+    if (typeof idToken !== "string" || !idToken) {
       const correlationId = generateCorrelationId();
       const res = NextResponse.json(
         { status: "error", code: "validation_error", message: "Google ID token is required." },

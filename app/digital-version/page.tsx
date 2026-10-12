@@ -1,3 +1,4 @@
+import { DEVELOPMENT_MESSAGE } from "@/lib/productCopy";
 import Image from "next/image";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -87,8 +88,7 @@ export default function DigitalVersionPage() {
                 One Meeting. <em className="italic">Every Language.</em>
               </h1>
               <p className="mt-4 text-[14px] text-slate">
-                <span className="status-tag mr-2">In development · Windows first</span>
-                Language support is being developed and validated, starting with Hindi ↔ English.
+                {DEVELOPMENT_MESSAGE}
               </p>
               <div className="mt-6 max-w-[56ch] space-y-3 text-[17px] leading-relaxed text-slate">
                 <p>Voxlate Digital is real-time AI translation software we&apos;re developing for online meetings, calls and remote collaboration.</p>
@@ -123,18 +123,18 @@ export default function DigitalVersionPage() {
                 width={3832}
                 height={1120}
                 sizes="(max-width: 1200px) 100vw, 1104px"
-                className="h-auto w-full rounded-[14px] border border-line"
+                className="h-auto w-full rounded-[6px] border border-line"
               />
               <figcaption className="mt-3 text-[13px] text-slate">Concept illustration of the meeting version.</figcaption>
             </figure>
             <div className="mt-10 grid gap-6 md:grid-cols-2">
-              <div className="rounded-[14px] border-2 border-primary p-6">
+              <div className="rounded-[6px] border-2 border-primary p-6">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-primary">You → meeting</p>
                 <p className="mt-3 text-[17px] leading-relaxed text-ink">
                   You speak Hindi; the meeting hears English through Voxlate Microphone.
                 </p>
               </div>
-              <div className="rounded-[14px] border border-line-strong p-6">
+              <div className="rounded-[6px] border border-line-strong p-6">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ink">Meeting → you</p>
                 <p className="mt-3 text-[17px] leading-relaxed text-ink">
                   Others speak English; you hear Hindi from Voxlate Speaker on your own headphones.
@@ -160,19 +160,11 @@ export default function DigitalVersionPage() {
         <section aria-labelledby="uses-title" className="py-16 md:py-24">
           <div className="page-container">
             <h2 id="uses-title" className="display-section">Use Cases</h2>
-            <ul className="mt-10 grid gap-x-8 gap-y-12 md:grid-cols-2">
+            <ul className="mt-10 divide-y divide-line border-y border-line">
               {USE_CASES.map((u) => (
-                <li key={u.label}>
-                  <Image
-                    src={u.photo}
-                    alt={u.alt}
-                    width={3124}
-                    height={1376}
-                    sizes="(max-width: 768px) 100vw, 540px"
-                    className="aspect-[9/4] h-auto w-full rounded-[12px] bg-mist object-cover"
-                  />
-                  <h3 className="mt-4 text-[13px] font-semibold uppercase tracking-[0.12em] text-ink">{u.label}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-slate">{u.caption}</p>
+                <li key={u.label} className="grid gap-3 py-6 sm:grid-cols-[minmax(180px,0.8fr)_1.4fr] sm:gap-10">
+                  <h3 className="text-[16px] font-medium text-ink">{u.label}</h3>
+                  <p className="max-w-[65ch] text-[16px] leading-relaxed text-slate">{u.caption}</p>
                 </li>
               ))}
             </ul>
@@ -208,32 +200,25 @@ export default function DigitalVersionPage() {
               </p>
             </div>
 
-            <div className="relative mt-12 overflow-hidden rounded-[16px] border border-line bg-mist md:aspect-[2.4/1]">
-              <svg aria-hidden="true" className="absolute inset-0 h-full w-full" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice" fill="none">
-                <path d="M-40 420 C 180 380 260 160 470 190 C 640 214 640 380 820 360 C 980 342 1060 140 1260 120" stroke="#285A78" strokeOpacity="0.12" strokeWidth="56" strokeLinecap="round" />
-                <path d="M-40 120 C 160 90 300 300 520 290 C 700 282 760 100 960 110 C 1080 116 1160 220 1260 260" stroke="#182B3A" strokeOpacity="0.07" strokeWidth="2" />
-              </svg>
+            <div className="relative mt-12 overflow-hidden rounded-[8px] border border-line bg-mist md:aspect-[2.4/1]">
+
               <div className="relative flex h-full flex-col items-center justify-center gap-8 px-6 py-12">
                 <ul className="grid w-full max-w-[640px] grid-cols-1 gap-4 min-[420px]:grid-cols-3 md:gap-8">
                   {MEETING_APPS.map((app) => (
                     <li key={app.name} className="flex flex-col items-center gap-3">
-                      <span className="flex aspect-square w-full max-w-[148px] items-center justify-center rounded-[20px] border border-line bg-surface shadow-[0_8px_24px_-16px_rgb(24_43_58/0.35)] max-[419px]:max-w-[120px]">
+                      <span className="flex aspect-square w-full max-w-[148px] items-center justify-center rounded-[8px] border border-line bg-surface max-[419px]:max-w-[120px]">
                         <Image src={app.src} alt="" width={app.width} height={app.height} className={`h-auto ${app.className}`} />
                       </span>
                       <span className="text-center">
                         <span className="block text-[15px] font-semibold text-ink">{app.name}</span>
-                        <span className="block text-[13px] text-slate">Planned · not yet tested</span>
                       </span>
                     </li>
                   ))}
                 </ul>
-                <p className="rounded-full bg-surface/90 px-4 py-1.5 text-[13px] font-medium text-ink">
-                  Planned compatibility · testing pending
-                </p>
               </div>
             </div>
             <p className="mt-6 max-w-[70ch] text-[15px] leading-relaxed text-slate">
-              Webex and GoTo Meeting are further planned test targets. No bots. No extra links. Once the app is available,
+              Webex and GoTo Meeting are also part of our development roadmap. No bots. No extra links. Once the app is available,
               you&apos;ll install it and choose Voxlate&apos;s audio devices in your meeting app.
             </p>
           </div>
@@ -247,7 +232,7 @@ export default function DigitalVersionPage() {
             </div>
             <div>
               <p className="text-[18px] leading-relaxed text-ink">
-                Some conversations don&apos;t need extra tools — no plugins, no bots, no setup required.
+                Voxlate is being designed to work alongside the meeting apps you already use.
               </p>
               <ul className="mt-6 space-y-3 text-[16px] text-slate">
                 {PRIVACY_POINTS.map((p) => (

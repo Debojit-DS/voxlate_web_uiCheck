@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("resume") as File | null;
 
-    if (!file) {
+    if (!(file instanceof File)) {
       const res = NextResponse.json(
         { status: "error", code: "validation_error", message: "Resume file is required." },
         { status: 400 }
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       cloudinary.uploader.upload_stream(
         {
           folder: "voxlate/resumes",
+          timeout: 25_000,
           resource_type: "raw",
           format: "pdf",
         },

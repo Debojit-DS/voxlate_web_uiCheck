@@ -15,7 +15,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
         </Link>
       </header>
       <main className="flex flex-1 items-start justify-center px-5 pb-20 pt-6 md:pt-12">
-        <div className="w-full max-w-[440px] rounded-[18px] border border-line bg-surface p-6 sm:p-9">
+        <div className="w-full max-w-[440px] rounded-[8px] border border-line bg-surface p-6 sm:p-9">
           <h1 className="font-display text-[34px] leading-tight text-ink">{title}</h1>
           <p className="mt-2 text-[15px] text-slate">{subtitle}</p>
           <div className="mt-8">{children}</div>

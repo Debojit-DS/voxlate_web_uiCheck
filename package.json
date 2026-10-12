@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:integration": "node --test tests/api-integration.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",

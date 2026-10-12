@@ -10,7 +10,7 @@ export function useGatedWaitlist() {
   const { openPrompt } = useAuthPrompt();
 
   const openWaitlist = (source?: string) => {
-    if (!isLoading && user) {
+    if (user) {
       openModal(source ?? "navbar");
     } else {
       openPrompt({ redirectTo: window.location.pathname });

@@ -10,6 +10,7 @@ import { signupUser } from "@/lib/authApi";
 import { uploadPhoto } from "@/lib/uploadApi";
 import { submitToWaitlist } from "@/lib/waitlistApi";
 import { signupSchema, type SignupFormValues } from "@/lib/authValidation";
+import { safeRedirect } from "@/lib/safeRedirect";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -26,7 +27,7 @@ export default function SignupForm() {
   const [success, setSuccess] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  const redirectTo = searchParams.get("redirectTo") || "/";
+  const redirectTo = safeRedirect(searchParams.get("redirectTo"));
   const queryString = searchParams.toString();
 
   const {
@@ -86,13 +87,12 @@ export default function SignupForm() {
     }
 
     const result = await signupUser({ ...values, photo: photoUrl });
-    setIsSubmitting(false);
 
     if (result.status === "success") {
       signup({ ...result.data, photoUrl: result.data.photoUrl });
 
       if (values.joinWaitlist) {
-        await submitToWaitlist({
+        const waitlistResult = await submitToWaitlist({
           name: values.name,
           email: values.email,
           company: "",
@@ -103,8 +103,14 @@ export default function SignupForm() {
           source: "signup",
           photo: photoUrl || result.data.photoUrl || "",
         });
+        if (waitlistResult.status === "error" && waitlistResult.code !== "duplicate_email") {
+          setIsSubmitting(false);
+          setFormError("Your account was created, but joining the waitlist failed. You can retry from the waitlist page.");
+          return;
+        }
       }
 
+      setIsSubmitting(false);
       setSuccess(true);
       setTimeout(() => router.push(redirectTo), 1500);
     } else if (result.code === "email_taken") {
@@ -114,6 +120,7 @@ export default function SignupForm() {
     } else {
       setFormError(result.message);
     }
+    setIsSubmitting(false);
   }
 
   if (success) return <AuthStatus title="Account created" message="Redirecting you..." />;
@@ -128,7 +135,7 @@ export default function SignupForm() {
 
         <div>
           <label htmlFor="photo" className="field-label">
-            Hiding that cute smile should be illegal — come on, let the world see it: add a profile photo!{" "}
+            Profile photo{" "}
             <span className="font-normal text-slate">(optional)</span>
           </label>
           <div className="flex items-center gap-4">
@@ -145,7 +152,7 @@ export default function SignupForm() {
               accept="image/*"
               onChange={handlePhotoChange}
               aria-describedby="photo-hint"
-              className="block w-full text-[14px] text-slate file:mr-3 file:h-10 file:cursor-pointer file:rounded-[10px] file:border file:border-line-strong file:bg-surface file:px-4 file:text-[14px] file:font-medium file:text-ink hover:file:bg-mist"
+              className="block w-full text-[14px] text-slate file:mr-3 file:h-10 file:cursor-pointer file:rounded-[6px] file:border file:border-line-strong file:bg-surface file:px-4 file:text-[14px] file:font-medium file:text-ink hover:file:bg-mist"
             />
           </div>
           <p id="photo-hint" className="field-hint">Max 10MB. JPG, PNG, or WebP.</p>

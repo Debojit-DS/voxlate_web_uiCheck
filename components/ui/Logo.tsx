@@ -12,11 +12,11 @@ export function Logo({ className = "h-24 w-auto" }: { className?: string }) {
 /** Mark + existing VOXLATE wordmark and tagline, scaled together. */
 export function LogoLockup({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="flex shrink-0 items-center gap-2 rounded-md" aria-label="Voxlate home">
-      <Logo className="h-11 w-auto md:h-12" />
+    <Link href={href} className="flex shrink-0 items-center gap-2 rounded-md max-[360px]:gap-1.5" aria-label="Voxlate home">
+      <Logo className="h-11 w-auto max-[360px]:h-9 md:h-12" />
       <span className={`${brandFont.className} leading-none`} aria-hidden="true">
-        <span className="block text-[22px] font-bold tracking-tight text-ink md:text-2xl">VOXLATE</span>
-        <span className="mt-0.5 block whitespace-nowrap text-[9px] font-medium uppercase tracking-widest text-slate md:text-[10px]">
+        <span className="block text-[22px] font-bold tracking-tight text-ink max-[360px]:text-[20px] md:text-2xl">VOXLATE</span>
+        <span className="mt-0.5 block whitespace-nowrap text-[9px] font-medium uppercase tracking-widest text-slate max-[360px]:text-[7.5px] md:text-[10px]">
           Breaking Language Barriers
         </span>
       </span>

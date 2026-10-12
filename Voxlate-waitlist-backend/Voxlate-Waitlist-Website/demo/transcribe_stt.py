@@ -10,7 +10,7 @@ def transcribe_audio_groq(audio_file_path, api_key=None):
     """
     try:
         # Uses the provided key or defaults to the GROQ_API_KEY environment variable
-        client = Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"))
+        client = Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"), timeout=30.0, max_retries=0)
         
         with open(audio_file_path, "rb") as audio_file:
             response = client.audio.transcriptions.create(

@@ -51,6 +51,11 @@
   min-block-size: 44px;
 }
 
+.actions > a {
+  display: inline-flex;
+  align-items: center;
+}
+
 .invitation {
   max-inline-size: min(100%, 56ch);
   margin: var(--hero-gap) auto 0;

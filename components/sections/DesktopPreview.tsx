@@ -11,7 +11,7 @@ const OUTPUTS = ["USB headphones", "Built-in speakers", "Default system output"]
 
 function Direction({ label, from, to, outgoing }: { label: string; from: string; to: string; outgoing?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
+    <div className="flex flex-col items-start gap-2 py-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
       <span className={`text-[11px] font-semibold uppercase tracking-[0.12em] ${outgoing ? "text-primary" : "text-ink"}`}>
         {label}
       </span>
@@ -41,9 +41,9 @@ export function DesktopPreview() {
         role="group"
         aria-label="Planned desktop app preview"
         aria-describedby={`${id}-note`}
-        className="relative rounded-[10px] border border-line bg-surface shadow-[0_30px_60px_-30px_rgb(24_43_58/0.28)]"
+        className="relative rounded-[6px] border border-line bg-surface"
       >
-        <div className="flex items-center justify-between rounded-t-[10px] border-b border-line bg-page px-4 py-2.5">
+        <div className="flex items-center justify-between rounded-t-[6px] border-b border-line bg-page px-4 py-2.5">
           <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
             <Logo className="h-5 w-auto" />
             Voxlate

@@ -1,40 +1,49 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWaitlistModal } from "@/components/waitlist/WaitlistModalProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useAuthPrompt } from "@/components/auth/AuthPromptProvider";
 import { checkWaitlistStatus } from "@/lib/waitlistApi";
 
-type DemoGateStatus = "idle" | "loading" | "allowed" | "blocked";
+type DemoGateStatus = "idle" | "loading" | "allowed" | "blocked" | "error";
 
 export function useDemoGate() {
   const [status, setStatus] = useState<DemoGateStatus>("idle");
+  const generation = useRef(0);
   const { user } = useAuth();
+  const email = user?.email;
+  const mounted = useRef(false);
   const { openModal } = useWaitlistModal();
   const { openPrompt } = useAuthPrompt();
 
   const checkStatus = useCallback(async () => {
-    if (!user?.email) {
+    const requestId = ++generation.current;
+    if (!email) {
       setStatus("blocked");
       return;
     }
 
     setStatus("loading");
     try {
-      const result = await checkWaitlistStatus(user.email);
-      if (result.status === "success" && result.data.joined) {
+      const result = await checkWaitlistStatus(email);
+      if (!mounted.current || requestId !== generation.current) return;
+      if (result.status === "error") {
+        setStatus("error");
+      } else if (result.data.joined) {
         setStatus("allowed");
       } else {
         setStatus("blocked");
       }
     } catch {
-      setStatus("blocked");
+      if (mounted.current && requestId === generation.current) setStatus("error");
     }
-  }, [user?.email]);
+  }, [email]);
 
   useEffect(() => {
-    checkStatus();
+    mounted.current = true;
+    const timer = setTimeout(() => void checkStatus(), 0);
+    return () => { mounted.current = false; clearTimeout(timer); };
   }, [checkStatus]);
 
   useEffect(() => {

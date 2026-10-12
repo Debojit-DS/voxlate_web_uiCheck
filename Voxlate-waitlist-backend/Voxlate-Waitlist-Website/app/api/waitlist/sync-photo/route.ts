@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withCors, withCorrelationId, withSecurityHeaders } from "@/lib/cors";
 import { generateCorrelationId } from "@/lib/correlationId";
 import { prisma } from "@/lib/db";
+import { verifySession, SESSION_COOKIE } from "@/lib/auth";
 import { z } from "zod";
 
 const syncPhotoSchema = z.object({
@@ -18,6 +19,9 @@ const syncPhotoSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
+  const session = token ? await verifySession(token) : null;
+  if (!session) return NextResponse.json({ status: "error", code: "unauthorized", message: "Not signed in." }, { status: 401 });
   let body: unknown;
   try {
     body = await req.json();
@@ -44,6 +48,7 @@ export async function POST(req: NextRequest) {
 
   const { email, photo } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
+  if (normalizedEmail !== session.email) return NextResponse.json({ status: "error", code: "forbidden", message: "You can only update your own profile." }, { status: 403 });
 
   try {
     const entry = await prisma.waitlistEntry.findUnique({

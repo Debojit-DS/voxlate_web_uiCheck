@@ -1,26 +1,14 @@
 "use client";
 
+import { uploadCareerResume, submitCareerApplication, type CareerAnswers } from "@/lib/careersApi";
+
 import { useEffect, useRef, useState } from "react";
 import { SquareCheck } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/Button";
 
-type FormData = {
-  fullName: string;
-  email: string;
-  phone: string;
-  college: string;
-  year: string;
-  role: string;
-  skills: string;
-  motivation: string;
-  project: string;
-  ideas: string;
-  differentiator: string;
-  resume: File | null;
-  links: string;
-};
+type CareerFormData = CareerAnswers & { resume: File | null };
 
 const ROLES = [
   "Tech (Full-Stack / Backend / Frontend)",
@@ -51,7 +39,8 @@ export default function CareersPage() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const successRef = useRef<HTMLHeadingElement>(null);
-  const [form, setForm] = useState<FormData>({
+  const uploadedResume = useRef<{ file: File; url: string } | null>(null);
+  const [form, setForm] = useState<CareerFormData>({
     fullName: "",
     email: "",
     phone: "",
@@ -67,16 +56,16 @@ export default function CareersPage() {
     links: "",
   });
 
-  const update = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const update = (field: keyof CareerFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement;
-    if (field === "resume" && target.files?.[0]) {
-      const file = target.files[0];
-      if (file.type !== "application/pdf") {
-        setError("Please upload a PDF file only.");
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        setError("File size must be less than 10MB.");
+    if (field === "resume") {
+      const file = target.files?.[0] ?? null;
+      uploadedResume.current = null;
+      setForm((prev) => ({ ...prev, resume: null }));
+      if (!file) { setError(null); return; }
+      if (file.type !== "application/pdf" || !file.size || file.size > 10 * 1024 * 1024) {
+        target.value = "";
+        setError("Please choose a PDF resume under 10 MB.");
         return;
       }
       setError(null);
@@ -88,6 +77,7 @@ export default function CareersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError(null);
 
     if (!form.resume) {
@@ -99,59 +89,15 @@ export default function CareersPage() {
     setProgress("Uploading your resume…");
 
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append("resume", form.resume);
-
-      const uploadRes = await fetch("/api/upload/resume", {
-        method: "POST",
-        body: uploadFormData,
-        signal: AbortSignal.timeout(30_000),
-      });
-
-      if (!uploadRes.ok) {
-        const uploadData = await uploadRes.json().catch(() => ({}));
-        throw new Error(uploadData.message || "Failed to upload resume.");
-      }
-
-      const uploadData = await uploadRes.json();
-      const resumeUrl = uploadData.data?.url;
-
+      let resumeUrl = uploadedResume.current?.file === form.resume ? uploadedResume.current.url : null;
       if (!resumeUrl) {
-        throw new Error("Resume URL not returned from upload.");
+        resumeUrl = await uploadCareerResume(form.resume);
+        uploadedResume.current = { file: form.resume, url: resumeUrl };
       }
-
       setProgress("Sending your application…");
-      const payload = {
-        fullName: form.fullName,
-        email: form.email,
-        contactNumber: form.phone,
-        college: form.college,
-        currentYear: form.year,
-        roleAppliedFor: form.role,
-        strongestSkills: form.skills,
-        motivation: form.motivation,
-        projectDetails: form.project || null,
-        proposedIdea: form.ideas,
-        uniqueEdge: form.differentiator,
-        portfolioLinks: form.links || null,
-        resumeUrl,
-      };
-
-      const submitRes = await fetch("/api/careers/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(30_000),
-      });
-
-      if (!submitRes.ok) {
-        const submitData = await submitRes.json().catch(() => ({}));
-        throw new Error(submitData.message || "Failed to submit application.");
-      }
-
+      await submitCareerApplication(form, resumeUrl);
       setSubmitted(true);
     } catch (err) {
-      console.error("Application submission error", err);
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -178,7 +124,7 @@ export default function CareersPage() {
 
         {submitted ? (
           <div className="page-container">
-            <div className="max-w-[720px] rounded-[18px] border border-line bg-surface p-8 md:p-10" role="status">
+            <div className="max-w-[720px] rounded-[8px] border border-line bg-surface p-8 md:p-10" role="status">
               <SquareCheck className="text-success" size={36} aria-hidden />
               <h2 ref={successRef} tabIndex={-1} className="mt-4 font-display text-[32px] leading-tight text-ink">
                 Application Received!
@@ -191,7 +137,7 @@ export default function CareersPage() {
           </div>
         ) : (
           <div className="page-container">
-          <form onSubmit={handleSubmit} className="max-w-[820px]">
+          <form onSubmit={handleSubmit} aria-busy={isSubmitting} className="max-w-[820px]">
             <fieldset className="border-t border-ink pt-6">
               <legend className="float-left w-full font-display text-[26px] leading-tight text-ink">Candidate Profile & Academic Background</legend>
               <div className="clear-both space-y-5 pt-6">
@@ -282,7 +228,7 @@ export default function CareersPage() {
                     required
                     aria-describedby="c-resume-hint"
                     onChange={update("resume")}
-                    className="block w-full text-[14px] text-slate file:mr-3 file:h-11 file:cursor-pointer file:rounded-[10px] file:border file:border-line-strong file:bg-surface file:px-4 file:text-[14px] file:font-medium file:text-ink hover:file:bg-mist"
+                    className="block w-full text-[14px] text-slate file:mr-3 file:h-11 file:cursor-pointer file:rounded-[6px] file:border file:border-line-strong file:bg-surface file:px-4 file:text-[14px] file:font-medium file:text-ink hover:file:bg-mist"
                   />
                   <p id="c-resume-hint" className="field-hint">Upload your resume in PDF format. Max size: 10MB.</p>
                   {form.resume && (
@@ -299,7 +245,7 @@ export default function CareersPage() {
             </fieldset>
 
             {error && (
-              <div role="alert" className="mt-8 rounded-[10px] border border-danger bg-danger-tint px-4 py-3 text-[14px] text-danger">
+              <div role="alert" className="mt-8 rounded-[6px] border border-danger bg-danger-tint px-4 py-3 text-[14px] text-danger">
                 {error} Your answers are still here.
               </div>
             )}

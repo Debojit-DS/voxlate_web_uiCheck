@@ -148,7 +148,7 @@ export function LanguageSelect({ id, label, value, options, onChange, disabled =
         <ChevronDown size={16} aria-hidden className={expanded ? "rotate-180 text-primary" : "text-slate"} />
       </button>
       {expanded && (
-        <div className={`absolute inset-x-0 z-30 shadow-[0_8px_24px_-12px_rgb(24_43_58/0.25)] ${above ? "bottom-full mb-2" : "top-full mt-2"}`}>
+        <div className={`absolute inset-x-0 z-30 ${above ? "bottom-full mb-2" : "top-full mt-2"}`}>
           <ScrollFadeList
             items={options}
             getKey={(option) => option}

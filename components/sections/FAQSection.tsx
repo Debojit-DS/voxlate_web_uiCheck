@@ -1,3 +1,4 @@
+import { DEVELOPMENT_MESSAGE } from "@/lib/productCopy";
 import { Plus } from "lucide-react";
 
 // Original questions; answers carry the claim qualifications recorded in REDESIGN_CONTENT_MAP.md (C8–C12).
@@ -15,7 +16,7 @@ const FAQS = [
   {
     question: "How many languages does it support?",
     answer:
-      "Not yet as many as we're aiming for. The first pilot is Hindi ↔ English in both directions; Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese and Urdu ↔ English are on the roadmap and will be released only after testing. Our long-term goal is to cover the majority of the world's most-spoken languages. The web demo currently offers its own list of target languages.",
+      "Our initial focus is Hindi ↔ English in both directions; Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese and Urdu ↔ English are part of our development roadmap. Our long-term goal is to cover the majority of the world's most-spoken languages. The web demo currently offers its own list of target languages.",
   },
   {
     question: "Can businesses and organizations use Voxlate?",
@@ -25,7 +26,7 @@ const FAQS = [
   {
     question: "When will Voxlate be available?",
     answer:
-      "We are currently in pre-launch. Join the waitlist to be notified the moment Voxlate is ready, and get early access as one of our first testers.",
+      `${DEVELOPMENT_MESSAGE} Join the waitlist for launch updates and early access.`,
   },
   {
     question: "How does the waitlist work?",

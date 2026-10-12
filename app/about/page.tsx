@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { UnderlineLink } from "@/components/ui/UnderlineLink";
+import { JoinMyTeamButton } from "@/components/ui/JoinMyTeamButton";
 
 export const metadata = {
   title: "About — Voxlate",
@@ -257,13 +258,11 @@ export default function AboutPage() {
             </section>
           ))}
 
-          <div className="mt-20 flex flex-col gap-4 border-t border-line pt-8 text-[16px] sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-slate">
-              Want to build this with us?{" "}
-              <UnderlineLink href="/careers" variant="goes-out-comes-in" direction="right" className="font-medium">
-                See careers
-              </UnderlineLink>
-            </p>
+          <div id="join-team" className="mt-20 flex flex-col gap-6 border-t border-line pt-8 text-[16px] sm:flex-row sm:items-center sm:justify-between">
+            <div className="w-full sm:w-auto">
+              <p className="text-slate">Want to build this with us?</p>
+              <JoinMyTeamButton className="mt-4" />
+            </div>
             <p className="text-slate">
               Curious about the product?{" "}
               <UnderlineLink href="/digital-version" variant="goes-out-comes-in" direction="right" className="font-medium">

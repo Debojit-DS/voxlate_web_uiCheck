@@ -1,3 +1,4 @@
+import { paginationParams } from "@/lib/pagination";
 import { NextRequest, NextResponse } from "next/server";
 import { withCors, withCorrelationId, withSecurityHeaders } from "@/lib/cors";
 import { generateCorrelationId } from "@/lib/correlationId";
@@ -24,8 +25,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const page = Math.max(1, Number.isNaN(Number(searchParams.get("page"))) ? 1 : Number(searchParams.get("page")));
-  const pageSize = Math.min(100, Math.max(1, Number.isNaN(Number(searchParams.get("pageSize"))) ? 25 : Number(searchParams.get("pageSize"))));
+  const { page, pageSize } = paginationParams(searchParams, 25, 100);
   const search = searchParams.get("search")?.trim();
   const product = searchParams.get("product");
   const type = searchParams.get("type");

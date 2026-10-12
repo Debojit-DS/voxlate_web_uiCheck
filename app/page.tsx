@@ -23,7 +23,7 @@ const GOALS = [
   { label: "Real-Time Translation" },
   { label: "Original Voice Preserved", note: "in development" },
   { label: "Secure & Private", note: "a design goal" },
-  { label: "100+ Languages", note: "long-term goal, not yet supported" },
+  { label: "100+ Languages", note: "long-term goal" },
   { label: "Natural Conversations" },
 ];
 
@@ -65,7 +65,7 @@ export default function Page() {
           <div className="page-container">
             <h2 id="products-title" className="display-section">Our Products</h2>
 
-            <article className="mt-10 grid gap-8 rounded-[18px] border border-line bg-surface p-6 sm:p-10 md:grid-cols-[1.3fr_1fr] md:items-center">
+            <article className="mt-10 grid gap-8 border-y border-line py-8 sm:py-10 md:grid-cols-[1.3fr_1fr] md:items-center">
               <div>
                 <p className="flex flex-wrap items-center gap-3">
                   <span className="eyebrow">Digital Version</span>
@@ -85,11 +85,11 @@ export default function Page() {
                   </UnderlineLink>
                 </div>
               </div>
-              <dl className="grid gap-px overflow-hidden rounded-[12px] border border-line bg-line text-[15px]">
+              <dl className="grid gap-px overflow-hidden rounded-[6px] border border-line bg-line text-[15px]">
                 {[
                   ["Today", "Recorded-clip web demo"],
                   ["First pilot", "Hindi ↔ English, both directions"],
-                  ["Meeting apps", "Zoom, Google Meet, Teams — testing pending"],
+                  ["Planned meeting apps", "Zoom, Google Meet, Teams"],
                 ].map(([term, value]) => (
                   <div key={term} className="flex flex-col gap-1 bg-page px-5 py-4 sm:flex-row sm:justify-between sm:gap-6">
                     <dt className="text-slate">{term}</dt>
@@ -99,7 +99,7 @@ export default function Page() {
               </dl>
             </article>
 
-            <article className="mt-6 grid items-center gap-8 rounded-[18px] border border-line bg-surface p-6 sm:p-8 md:grid-cols-[1.3fr_1fr]">
+            <article className="grid items-center gap-8 border-b border-line py-8 sm:py-10 md:grid-cols-[1.3fr_1fr]">
               <div>
                 <p className="flex flex-wrap items-center gap-3">
                   <span className="eyebrow">Physical Version</span>
@@ -123,7 +123,7 @@ export default function Page() {
                   width={2048}
                   height={2062}
                   sizes="280px"
-                  className="h-auto w-full rounded-[14px] bg-mist"
+                  className="h-auto w-full rounded-[6px] bg-mist"
                 />
                 <figcaption className="mt-2 text-center text-[13px] text-slate">Concept rendering</figcaption>
               </figure>

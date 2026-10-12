@@ -116,7 +116,7 @@ export default function WaitlistPage() {
           </nav>
         )}
 
-        <section aria-labelledby="next-title" className="mt-16 flex flex-col items-start gap-6 rounded-[18px] border border-line bg-surface p-6 sm:p-10 md:flex-row md:items-center md:justify-between">
+        <section aria-labelledby="next-title" className="mt-16 flex flex-col items-start gap-6 rounded-[8px] border border-line bg-surface p-6 sm:p-10 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 id="next-title" className="display-section">Be the next one!</h2>
             <p className="mt-2 text-[17px] text-slate">Join the waitlist and get early access to Voxlate.</p>

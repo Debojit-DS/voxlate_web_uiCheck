@@ -1,3 +1,4 @@
+import { DEVELOPMENT_MESSAGE } from "@/lib/productCopy";
 import Image from "next/image";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -35,22 +36,22 @@ const STEPS = ["Wear Voxlate Device", "Choose Your Language", "Talk Naturally", 
 const MODES = [
   {
     name: "P2E — Person to Environment",
-    badge: "Auto-connect within 2 m — unverified design target",
+    badge: "Auto-connect within 2 m",
     image: { src: "/images/physical/modes/p2e.png", alt: "Illustration: two people wearing Voxlate devices talking within about two metres", w: 2582, h: 1664 },
     intro: "Perfect for dynamic, one-to-one or small group conversations in daily life.",
     items: [
-      "Auto-connects to any Voxlate device within 2 meters (planned · unverified)",
-      "No manual pairing required (planned · unverified)",
+      "Auto-connects to any Voxlate device within 2 meters",
+      "No manual pairing required",
       "Ideal for tourists, shopping, offices, campuses & casual conversations",
     ],
   },
   {
     name: "P2P — Person to Person",
-    badge: "Connect 2 to 200 people — unverified design target",
+    badge: "Connect 2 to 200 people",
     image: { src: "/images/physical/modes/p2p.png", alt: "Illustration: a presenter connected to several listeners wearing Voxlate devices", w: 2468, h: 1696 },
     intro: "Designed for structured group communication like classrooms, seminars & events.",
     items: [
-      "Connect 2 to 200 participants at once (unverified design target)",
+      "Connect 2 to 200 participants at once",
       "Everyone hears in their own preferred language",
       "Ask questions, reply and understand everyone in real time",
     ],
@@ -59,8 +60,8 @@ const MODES = [
 
 const FEATURES = [
   { label: "Real-time Translation" },
-  { label: "Works Offline (Edge Processing)", note: "unverified design target" },
-  { label: "Long Battery Life", note: "unverified design target" },
+  { label: "Works Offline (Edge Processing)" },
+  { label: "Long Battery Life" },
   { label: "Lightweight & Comfortable" },
   { label: "Secure & Private", note: "design goal" },
   { label: "Multi-Language Support" },
@@ -108,11 +109,11 @@ export default function PhysicalVersionPage() {
                 <WaitlistButton source="physical-version-hero" label="Join Waitlist" wide />
               </div>
               <p className="mt-5 text-[14px] text-slate">
-                Join the waitlist today and get a chance to become one of our early product testers.
+                {DEVELOPMENT_MESSAGE}
               </p>
             </div>
             <figure>
-              <div className="overflow-hidden rounded-[18px] border border-line bg-mist">
+              <div className="overflow-hidden rounded-[8px] border border-line bg-mist">
                 <Image
                   src="/images/physical/hero-device.png"
                   alt="Concept rendering of the Voxlate Physical wearable translation device"
@@ -134,16 +135,8 @@ export default function PhysicalVersionPage() {
             <h2 id="situations-title" className="display-section">Built for Real-Life Situations</h2>
             <ul className="mt-10 grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3">
               {SITUATIONS.map((s) => (
-                <li key={s.label}>
-                  <Image
-                    src={s.src}
-                    alt={s.alt}
-                    width={s.w}
-                    height={s.h}
-                    sizes="(max-width: 768px) 50vw, 360px"
-                    className="aspect-[3/2] h-auto w-full rounded-[12px] bg-mist object-cover"
-                  />
-                  <p className="mt-3 text-[15px] font-semibold text-ink">{s.label}</p>
+                <li key={s.label} className="border-t border-line py-3">
+                  <p className="text-[17px] font-medium text-ink">{s.label}</p>
                 </li>
               ))}
             </ul>
@@ -158,7 +151,7 @@ export default function PhysicalVersionPage() {
               <p className="text-[14px] text-slate">Proposed interaction · not yet built</p>
             </div>
             <div className="mt-10 grid gap-10 lg:grid-cols-[1.6fr_1fr] lg:items-start">
-              <ol className="grid gap-px overflow-hidden rounded-[18px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+              <ol className="grid gap-px overflow-hidden rounded-[8px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
                 {STEPS.map((step, i) => (
                   <li key={step} className="bg-surface p-5">
                     <span className="font-display text-[34px] leading-none text-primary">{i + 1}</span>
@@ -185,7 +178,7 @@ export default function PhysicalVersionPage() {
             </div>
             <div className="mt-10 grid gap-6 md:grid-cols-2">
               {MODES.map((m) => (
-                <article key={m.name} className="rounded-[18px] border border-line bg-surface p-6 sm:p-8">
+                <article key={m.name} className="border-t border-line pt-6 sm:pt-8">
                   <h3 className="text-[19px] font-semibold text-ink">{m.name}</h3>
                   <p className="mt-1 text-[13px] text-slate">{m.badge}</p>
                   <Image
@@ -194,7 +187,7 @@ export default function PhysicalVersionPage() {
                     width={m.image.w}
                     height={m.image.h}
                     sizes="(max-width: 768px) 100vw, 480px"
-                    className="mt-5 h-auto w-full rounded-[12px] bg-mist"
+                    className="mt-5 h-auto w-full rounded-[6px] bg-mist"
                   />
                   <p className="mt-5 text-[16px] leading-relaxed text-slate">{m.intro}</p>
                   <ul className="mt-4 space-y-2 text-[15px] text-ink">
@@ -227,14 +220,13 @@ export default function PhysicalVersionPage() {
             </div>
             <div>
               <h3 className="text-[19px] font-semibold text-ink">Specifications</h3>
-              <p className="mt-2 text-[15px] text-slate">Design targets for the concept — not tested specifications.</p>
+              <p className="mt-2 text-[15px] text-slate">These are the specifications we are working toward as development progresses.</p>
               <div className="mt-6 overflow-x-auto">
                 <table className="w-full text-left text-[15px]">
                   <thead>
                     <tr className="border-b border-ink text-[13px] text-slate">
                       <th scope="col" className="py-2 pr-4 font-medium">Topic</th>
                       <th scope="col" className="py-2 pr-4 font-medium">Target</th>
-                      <th scope="col" className="py-2 font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -242,7 +234,6 @@ export default function PhysicalVersionPage() {
                       <tr key={s.label}>
                         <th scope="row" className="py-3 pr-4 font-medium text-ink">{s.label}</th>
                         <td className="py-3 pr-4 text-ink">{s.value}</td>
-                        <td className="py-3 text-[13px] text-slate">Unverified design target</td>
                       </tr>
                     ))}
                   </tbody>

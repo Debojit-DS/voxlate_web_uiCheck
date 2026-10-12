@@ -1,5 +1,7 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiClient";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Star, SquareCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +11,6 @@ type Review = {
   id: string;
   authorName: string;
   authorPhotoUrl: string | null;
-  userEmail: string | null;
   text: string;
   rating: number;
   createdAt: string;
@@ -54,17 +55,18 @@ export function ReviewBanner() {
 
   const sortReviews = useCallback((items: Review[]) => {
     return [...items].sort((a, b) => {
-      if (b.rating !== a.rating) return b.rating - a.rating;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, []);
 
   const fetchReviews = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch("/api/reviews");
+      const res = await apiRequest("/api/reviews");
       if (!res.ok) throw new Error("Failed to fetch reviews");
       const data = await res.json();
-      if (data.status === "success") setReviews(sortReviews(data.reviews));
+      if (data.status === "success" && Array.isArray(data.reviews)) setReviews(sortReviews(data.reviews));
       else throw new Error("Unexpected response");
     } catch (err) {
       console.error("fetch reviews error", err);
@@ -75,7 +77,8 @@ export function ReviewBanner() {
   }, [sortReviews]);
 
   useEffect(() => {
-    fetchReviews();
+    const timer = setTimeout(() => void fetchReviews(), 0);
+    return () => clearTimeout(timer);
   }, [fetchReviews]);
 
   useEffect(() => {
@@ -105,18 +108,16 @@ export function ReviewBanner() {
         rating: number;
         authorName?: string;
         authorPhotoUrl?: string | null;
-        userEmail?: string;
       } = { text: reviewText.trim(), rating };
 
       if (user) {
         payload.authorName = user.name;
         payload.authorPhotoUrl = user.photoUrl ?? null;
-        payload.userEmail = user.email;
       } else {
         payload.authorName = authorName.trim();
       }
 
-      const res = await fetch("/api/reviews", {
+      const res = await apiRequest("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -134,6 +135,8 @@ export function ReviewBanner() {
         setRating(0);
         setIsFormOpen(false);
         setSubmitted(true);
+      } else {
+        throw new Error("The service returned an unexpected response. Please try again.");
       }
     } catch (err) {
       console.error("submit review error", err);
@@ -162,13 +165,13 @@ export function ReviewBanner() {
       </div>
 
       {submitted && (
-        <p role="status" className="mt-6 rounded-[12px] bg-success-tint px-4 py-3 text-[15px] text-success">
+        <p role="status" className="mt-6 rounded-[6px] bg-success-tint px-4 py-3 text-[15px] text-success">
           Thanks — your review has been posted.
         </p>
       )}
 
       {isFormOpen && (
-        <form onSubmit={handleSubmitReview} className="mt-8 max-w-[640px] space-y-5 rounded-[18px] border border-line bg-surface p-6 sm:p-8">
+        <form onSubmit={handleSubmitReview} className="mt-8 max-w-[640px] space-y-5 rounded-[8px] border border-line bg-surface p-6 sm:p-8">
           <h3 ref={formHeading} tabIndex={-1} className="text-[19px] font-semibold text-ink">
             Leave a review
           </h3>
@@ -187,6 +190,7 @@ export function ReviewBanner() {
               id="review-name"
               type="text"
               autoComplete="name"
+              maxLength={120}
               value={nameValue}
               onChange={(e) => !isVerifiedUser && setAuthorName(e.target.value)}
               readOnly={isVerifiedUser}
@@ -215,6 +219,7 @@ export function ReviewBanner() {
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
               rows={4}
+              maxLength={5000}
               className="field resize-y"
             />
           </div>
@@ -254,9 +259,9 @@ export function ReviewBanner() {
           <p className="py-6 text-[15px] text-slate">No reviews yet. If you try the demo, you can be the first.</p>
         ) : (
           <>
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-x-10 md:grid-cols-2">
               {visible.map((review) => (
-                <li key={review.id} className="rounded-[14px] border border-line bg-surface p-5">
+                <li key={review.id} className="border-t border-line py-6">
                   <div className="flex items-center gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-mist text-[13px] font-semibold text-primary">
                       {review.authorPhotoUrl ? (
@@ -273,7 +278,7 @@ export function ReviewBanner() {
                       </p>
                     </div>
                   </div>
-                  <p className="mt-3 text-[15px] leading-relaxed text-ink">{review.text}</p>
+                  <p className="mt-3 break-words text-[15px] leading-relaxed text-ink [overflow-wrap:anywhere]">{review.text}</p>
                 </li>
               ))}
             </ul>

@@ -20,7 +20,7 @@ type ButtonProps = {
 };
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold whitespace-nowrap select-none " +
+  "inline-flex items-center justify-center gap-2 rounded-control font-semibold whitespace-nowrap select-none " +
   "transition-colors duration-150 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed";
 
 const sizes = {

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { LogoLockup } from "@/components/ui/Logo";
 import { useGatedWaitlist } from "@/components/auth/useGatedWaitlist";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { apiRequest } from "@/lib/apiClient";
 import { uploadPhoto } from "@/lib/uploadApi";
 
 const PRODUCT_LINKS = [
@@ -18,6 +19,7 @@ const PRODUCT_LINKS = [
 const NAV_LINKS = [
   { label: "Demo", href: "/demo" },
   { label: "About Us", href: "/about" },
+  { label: "Join My Team", href: "/careers" },
 ];
 
 /** Closes a popover on Escape (returning focus to its trigger) or on an outside click/focus. */
@@ -62,7 +64,7 @@ function Avatar({ name, photoUrl, size = 36 }: { name: string; photoUrl?: string
 
 export function Navbar() {
   const pathname = usePathname();
-  const { openWaitlist, isAuthenticated, isAuthLoading, logout } = useGatedWaitlist();
+  const { openWaitlist, isAuthenticated, logout } = useGatedWaitlist();
   const { user, updatePhoto } = useAuth();
 
   const [productsOpen, setProductsOpen] = useState(false);
@@ -89,6 +91,11 @@ export function Navbar() {
   const productActive = PRODUCT_LINKS.some((l) => isActive(l.href));
   const loginHref = `/login?redirectTo=${encodeURIComponent(pathname || "/")}`;
 
+  const handleLogout = async () => {
+    setPhotoStatus(null);
+    if (!(await logout())) setPhotoStatus("Couldn't sign out. Please try again.");
+  };
+
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -101,7 +108,7 @@ export function Navbar() {
       const uploaded = await uploadPhoto(reader.result as string);
       if (!uploaded) return setPhotoStatus("Photo upload failed. Please try again.");
       try {
-        const res = await fetch("/api/auth/me", {
+        const res = await apiRequest("/api/auth/me", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ photo: uploaded.url }),
@@ -127,9 +134,9 @@ export function Navbar() {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 bg-page/95 pt-3 backdrop-blur-sm supports-[backdrop-filter]:bg-page/85">
-      <div ref={mobileRef} className="page-container">
-        <div className="flex h-16 items-center justify-between gap-4 rounded-[14px] border border-line bg-page px-3 md:px-4">
+    <header className="pointer-events-none sticky top-0 z-40 bg-transparent pt-3">
+      <div ref={mobileRef} className="page-container relative">
+        <div className="pointer-events-auto flex h-16 items-center justify-between gap-4 rounded-[6px] border border-line-strong/50 bg-surface px-3 md:px-4">
           <LogoLockup />
 
           <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
@@ -148,7 +155,7 @@ export function Navbar() {
               {productsOpen && (
                 <ul
                   id="products-menu"
-                  className="absolute left-0 top-full mt-2 w-64 rounded-[14px] border border-line bg-surface p-2 shadow-[0_12px_32px_-12px_rgb(24_43_58/0.25)]"
+                  className="absolute left-0 top-full mt-2 w-64 rounded-[6px] border border-line bg-surface p-2"
                 >
                   {PRODUCT_LINKS.map((link) => (
                     <li key={link.href}>
@@ -156,7 +163,7 @@ export function Navbar() {
                         href={link.href}
                         aria-current={isActive(link.href) ? "page" : undefined}
                         onClick={closeProducts}
-                        className="block rounded-[10px] px-3 py-2.5 transition-colors hover:bg-mist"
+                        className="block rounded-[6px] px-3 py-2.5 transition-colors hover:bg-mist"
                       >
                         <span className="block text-[15px] font-medium text-ink">{link.label}</span>
                         <span className="block text-[13px] text-slate">{link.note}</span>
@@ -196,7 +203,7 @@ export function Navbar() {
                 {accountOpen && (
                   <div
                     id="account-menu"
-                    className="absolute right-0 top-full mt-2 w-64 rounded-[14px] border border-line bg-surface p-2 shadow-[0_12px_32px_-12px_rgb(24_43_58/0.25)]"
+                    className="absolute right-0 top-full mt-2 w-64 rounded-[6px] border border-line bg-surface p-2"
                   >
                     <div className="border-b border-line px-3 pb-3 pt-2">
                       <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
@@ -208,7 +215,7 @@ export function Navbar() {
                         setAccountOpen(false);
                         fileInputRef.current?.click();
                       }}
-                      className="mt-1 block w-full rounded-[10px] px-3 py-2 text-left text-sm text-ink hover:bg-mist"
+                      className="mt-1 block w-full rounded-[6px] px-3 py-2 text-left text-sm text-ink hover:bg-mist"
                     >
                       {user.photoUrl ? "Change photo" : "Upload photo"}
                     </button>
@@ -216,9 +223,9 @@ export function Navbar() {
                       type="button"
                       onClick={() => {
                         setAccountOpen(false);
-                        logout();
+                        void handleLogout();
                       }}
-                      className="block w-full rounded-[10px] px-3 py-2 text-left text-sm text-ink hover:bg-mist"
+                      className="block w-full rounded-[6px] px-3 py-2 text-left text-sm text-ink hover:bg-mist"
                     >
                       Sign Out
                     </button>
@@ -230,7 +237,7 @@ export function Navbar() {
                 Log In
               </Link>
             )}
-            <Button size="sm" onClick={() => openWaitlist("navbar")} loading={isAuthLoading}>
+            <Button size="sm" onClick={() => openWaitlist("navbar")}>
               Join Waitlist
             </Button>
           </div>
@@ -242,14 +249,14 @@ export function Navbar() {
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            className="flex h-10 w-10 items-center justify-center rounded-[10px] text-ink hover:bg-mist lg:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink hover:bg-mist lg:hidden"
           >
             {mobileOpen ? <X size={22} aria-hidden /> : <Menu size={22} aria-hidden />}
           </button>
         </div>
 
         {photoStatus && (
-          <p role="status" className="mt-2 text-right text-[13px] text-slate">
+          <p role="status" className="pointer-events-auto ml-auto mt-2 w-fit rounded-control border border-line bg-page px-3 py-2 text-right text-[13px] text-slate">
             {photoStatus}
           </p>
         )}
@@ -257,7 +264,7 @@ export function Navbar() {
         {mobileOpen && (
           <div
             id="mobile-menu"
-            className="mt-2 rounded-[14px] border border-line bg-surface p-3 shadow-[0_12px_32px_-12px_rgb(24_43_58/0.25)] lg:hidden"
+            className="pointer-events-auto absolute inset-x-5 top-full mt-2 max-h-[calc(100svh-100px)] overflow-y-auto rounded-[6px] border border-line bg-page p-3 md:inset-x-8 lg:hidden"
           >
             <nav aria-label="Mobile">
               <p className="eyebrow px-3 pb-1 pt-2">Products</p>
@@ -283,7 +290,7 @@ export function Navbar() {
                       <button type="button" className="text-link" onClick={() => fileInputRef.current?.click()}>
                         {user.photoUrl ? "Change photo" : "Upload photo"}
                       </button>
-                      <button type="button" className="text-link" onClick={() => { closeMobile(); logout(); }}>
+                      <button type="button" className="text-link" onClick={() => { closeMobile(); void handleLogout(); }}>
                         Sign Out
                       </button>
                     </div>
@@ -296,7 +303,7 @@ export function Navbar() {
               )}
               <Button
                 className="w-full"
-                loading={isAuthLoading}
+               
                 onClick={() => {
                   closeMobile();
                   openWaitlist("navbar");

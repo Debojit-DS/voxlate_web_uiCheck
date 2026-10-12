@@ -52,7 +52,7 @@ export async function proxy(req: NextRequest) {
   return response;
 }
 
-export const proxyConfig = {
+export const config = {
   matcher: ["/admin/:path*", "/api/:path*"],
 };
 

@@ -41,19 +41,21 @@ export async function GET(req: NextRequest) {
     return withCorrelationId(withSecurityHeaders(withCors(res)), correlationId);
   }
 
+  try {
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    select: { photoUrl: true },
+    select: { id: true, email: true, name: true, role: true, photoUrl: true },
   });
 
+  if (!user) return withSecurityHeaders(NextResponse.json({ status: "error", code: "unauthorized", message: "Not signed in." }, { status: 401 }));
   const correlationId = generateCorrelationId();
   const res = NextResponse.json({
     status: "success",
     data: {
-      id: session.sub,
-      email: session.email,
-      name: session.name,
-      role: session.role,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
       ...(user?.photoUrl ? { photoUrl: user.photoUrl } : {}),
     },
   });
@@ -69,6 +71,9 @@ export async function GET(req: NextRequest) {
     userId: session.sub,
   });
   return withCorrelationId(withSecurityHeaders(res), correlationId);
+  } catch {
+    return withSecurityHeaders(NextResponse.json({ status: "error", code: "server_error", message: "Your session couldn't be loaded. Please try again." }, { status: 503 }));
+  }
 }
 
 export async function OPTIONS(req: NextRequest) {

@@ -19,17 +19,19 @@ export function UnderlineLink({
   external,
   className = "",
 }: Props) {
-  const classes = `underline-link text-ink hover:text-primary ${className}`;
+  const classes = `underline-link-target text-ink hover:text-primary ${className}`;
+  // Keep the line on the label, independently of the anchor's touch target height.
+  const label = <span className="underline-link" data-variant={variant} data-direction={direction}>{children}</span>;
   if (external) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={classes} data-variant={variant} data-direction={direction}>
-        {children}
+      <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
+        {label}
       </a>
     );
   }
   return (
-    <Link href={href} className={classes} data-variant={variant} data-direction={direction}>
-      {children}
+    <Link href={href} className={classes}>
+      {label}
     </Link>
   );
 }

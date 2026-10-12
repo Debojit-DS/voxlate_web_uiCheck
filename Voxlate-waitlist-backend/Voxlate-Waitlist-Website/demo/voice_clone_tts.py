@@ -8,7 +8,7 @@ def onboard_user_voice(audio_file_path, user_name="Voxlate_Speaker"):
     """
     # The client automatically picks up the FISH_API_KEY from your .env file
     try:
-        client = FishAudio()
+        client = FishAudio(timeout=30.0)
     except Exception as e:
         print("❌ Failed to initialize Fish Audio Client. Is FISH_API_KEY in your .env?")
         return None
@@ -39,13 +39,14 @@ def generate_live_tts(text_to_speak, reference_id, output_path="output.wav"):
     Generates ultra-low latency speech using the saved voice profile.
     """
     try:
-        client = FishAudio()
+        client = FishAudio(timeout=30.0)
         
         print("  [API] Requesting ultra-low latency TTS chunk...")
         audio_content = client.tts.convert(
             text=text_to_speak,
             reference_id=reference_id,
-            model="s2.1-pro-free", 
+            model=os.getenv("FISH_TTS_MODEL", "s2.1-pro"),
+            format="wav", 
             latency="balanced" 
         )
         

@@ -7,7 +7,7 @@ def translate_text_groq(text, target_language, api_key=None):
     to the target language using Groq's API. Returns None if an error occurs.
     """
     try:
-        client = Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"))
+        client = Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"), timeout=30.0, max_retries=0)
         
         completion = client.chat.completions.create(
             model="openai/gpt-oss-120b",

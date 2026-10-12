@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { apiRequest } from "@/lib/apiClient";
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 
 export type User = {
   id: string;
@@ -14,7 +15,7 @@ type AuthContextValue = {
   isLoading: boolean;
   login: (user: User) => void;
   signup: (user: User) => void;
-  logout: () => void;
+  logout: () => Promise<boolean>;
   updatePhoto: (photoUrl: string) => void;
 };
 
@@ -23,20 +24,22 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const version = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    const requestVersion = version.current;
 
     async function restoreSession() {
       try {
-        const res = await fetch("/api/auth/me", {
+        const res = await apiRequest("/api/auth/me", {
           method: "GET",
           credentials: "include",
         });
 
         if (res.ok) {
           const data = await res.json();
-          if (data.status === "success" && data.data) {
+          if (!cancelled && requestVersion === version.current && data.status === "success" && data.data?.id && data.data.email) {
             setUser({
               id: data.data.id,
               name: data.data.name,
@@ -62,17 +65,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (userData: User) => {
+    ++version.current;
     setUser(userData);
   };
 
   const signup = (userData: User) => {
+    ++version.current;
     setUser(userData);
   };
 
-  const logout = () => {
-    setUser(null);
-    // Clear the session cookie too; otherwise the next page load restores the session.
-    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
+  const logout = async () => {
+    try {
+      const response = await apiRequest("/api/auth/logout", { method: "POST" });
+      if (!response.ok) return false;
+      ++version.current;
+      setUser(null);
+      return true;
+    } catch { return false; }
   };
 
   const updatePhoto = (photoUrl: string) => {

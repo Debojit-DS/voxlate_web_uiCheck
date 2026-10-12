@@ -23,7 +23,7 @@ export function LegalDocument({ title, updated, toc, children }: Props) {
           {toc && (
             <nav aria-label="Contents" className="lg:sticky lg:top-28 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
               {/* Collapsed on small screens so the document starts right away. */}
-              <details className="rounded-[12px] border border-line bg-surface p-4 lg:hidden">
+              <details className="rounded-[6px] border border-line bg-surface p-4 lg:hidden">
                 <summary className="cursor-pointer text-[14px] font-semibold text-ink">Contents</summary>
                 <TocList toc={toc} />
               </details>

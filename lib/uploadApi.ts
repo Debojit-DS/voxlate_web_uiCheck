@@ -1,6 +1,7 @@
+import { apiRequest } from "./apiClient";
 export async function uploadPhoto(base64: string): Promise<{ url: string } | null> {
   try {
-    const res = await fetch("/api/upload", {
+    const res = await apiRequest("/api/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ photo: base64 }),

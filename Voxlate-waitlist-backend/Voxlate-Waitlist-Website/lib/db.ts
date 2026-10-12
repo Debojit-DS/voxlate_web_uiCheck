@@ -1,12 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
+const globalDb = globalThis as unknown as { voxlatePrisma?: PrismaClient };
+const prisma = globalDb.voxlatePrisma ?? new PrismaClient({
+  datasources: { db: { url: process.env.DATABASE_URL } },
 });
+if (process.env.NODE_ENV !== "production") globalDb.voxlatePrisma = prisma;
 
 export function validateEnv() {
   const required = ["DATABASE_URL", "JWT_SECRET"];

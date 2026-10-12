@@ -7,6 +7,7 @@ import { waitlistSchema } from "@/lib/validation";
 import { resend } from "@/lib/resend";
 
 export async function GET(req: NextRequest) {
+  try {
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
 
@@ -57,6 +58,9 @@ export async function GET(req: NextRequest) {
     },
   });
   return withCorrelationId(withSecurityHeaders(withCors(res)), generateCorrelationId());
+  } catch {
+    return withSecurityHeaders(NextResponse.json({ status: "error", code: "server_error", message: "The waitlist is temporarily unavailable." }, { status: 503 }));
+  }
 }
 
 export async function POST(req: NextRequest) {

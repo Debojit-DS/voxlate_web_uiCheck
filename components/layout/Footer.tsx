@@ -73,7 +73,7 @@ export function Footer() {
           <div className="sm:col-span-3 lg:col-span-1">
             <h2 className="text-[13px] font-medium text-slate">Stay Updated</h2>
             <p className="mt-3 max-w-[34ch] text-[14px] leading-relaxed text-slate">
-              Join our waitlist and get the latest updates on our progress.
+              Voxlate is in development. Join the waitlist for release updates.
             </p>
             <div className="mt-4">
               <WaitlistButton source="footer" label="Join Waitlist" />

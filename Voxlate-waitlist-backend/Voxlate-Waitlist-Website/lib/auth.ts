@@ -77,8 +77,7 @@ export async function verifySession(
 ): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    if (!payload.sub || !payload.email) {
-      console.error("verifySession: Missing sub or email in JWT payload");
+    if (!payload.sub || !payload.email || (payload.aud && payload.aud !== "voxlate-web")) {
       return null;
     }
     return {
@@ -87,8 +86,7 @@ export async function verifySession(
       name: (payload.name as string) || "",
       role: (payload.role as "USER" | "ADMIN") || "USER", 
     };
-  } catch (error) {
-    console.error("verifySession error:", error); 
+  } catch { 
     return null;
   }
 }
@@ -103,9 +101,10 @@ export async function attachSessionCookie(
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    domain: process.env.NODE_ENV === "production" ? ".voxlatesn.in" : undefined,
+    domain: process.env.SESSION_COOKIE_DOMAIN || undefined,
     maxAge: SESSION_DURATION_SECONDS,
   });
+  clearLegacyCookie(res);
 }
 
 export function clearSessionCookie(res: NextResponse) {
@@ -114,7 +113,15 @@ export function clearSessionCookie(res: NextResponse) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    domain: process.env.NODE_ENV === "production" ? ".voxlatesn.in" : undefined,
+    domain: process.env.SESSION_COOKIE_DOMAIN || undefined,
     maxAge: 0,
   });
+  clearLegacyCookie(res);
+}
+
+// Retire the old shared-domain cookie when moving to host-only sessions.
+function clearLegacyCookie(res: NextResponse) {
+  if (process.env.NODE_ENV === "production" && !process.env.SESSION_COOKIE_DOMAIN) {
+    res.headers.append("Set-Cookie", `${SESSION_COOKIE}=; Path=/; Domain=.voxlatesn.in; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+  }
 }

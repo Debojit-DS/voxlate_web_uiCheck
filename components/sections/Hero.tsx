@@ -7,6 +7,7 @@ import { UnderlineLink } from "@/components/ui/UnderlineLink";
 import { useGatedWaitlist } from "@/components/auth/useGatedWaitlist";
 import { TutorialButton } from "@/components/waitlist/TutorialButton";
 import { HeroRibbon, RIBBON_WORDS } from "./HeroRibbon";
+import { DEVELOPMENT_MESSAGE } from "@/lib/productCopy";
 import styles from "./Hero.module.css";
 
 const PHRASES = ["Speak Naturally.", "Hear Every Language."];
@@ -24,7 +25,7 @@ function useMediaQuery(query: string) {
 }
 
 export function Hero() {
-  const { openWaitlist, isAuthLoading } = useGatedWaitlist();
+  const { openWaitlist } = useGatedWaitlist();
   const sectionRef = useRef<HTMLElement>(null);
   const [onScreen, setOnScreen] = useState(true);
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
@@ -61,7 +62,7 @@ export function Hero() {
         </p>
 
         <div className={styles.actions}>
-          <Button onClick={() => openWaitlist("hero")} loading={isAuthLoading} wide>
+          <Button onClick={() => openWaitlist("hero")} wide>
             Join Waitlist
           </Button>
           <UnderlineLink href="/demo" variant="goes-out-comes-in" direction="right" className="text-[15px] font-semibold">
@@ -70,7 +71,7 @@ export function Hero() {
           <TutorialButton label="Watch Tutorial" />
         </div>
         <p className={`${styles.invitation} text-slate`}>
-          Join the waitlist today and get a chance to become one of our early product testers before the official launch.
+          {DEVELOPMENT_MESSAGE}
         </p>
       </div>
 

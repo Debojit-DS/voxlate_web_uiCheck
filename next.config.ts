@@ -1,14 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  async rewrites() {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiBase}/api/:path*`,
-      },
-    ];
-  },
-};
+import type { NextConfig } from "next";
 
+// API traffic is handled at runtime by app/api/[...path]/route.ts.
+// Changing the upstream on the server no longer requires rebuilding rewrites.
+const nextConfig: NextConfig = {};
 export default nextConfig;

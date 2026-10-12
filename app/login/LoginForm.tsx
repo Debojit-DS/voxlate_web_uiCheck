@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginUser } from "@/lib/authApi";
 import { loginSchema, type LoginFormValues } from "@/lib/authValidation";
+import { safeRedirect } from "@/lib/safeRedirect";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -22,7 +23,7 @@ export default function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const redirectTo = searchParams.get("redirectTo") || "/";
+  const redirectTo = safeRedirect(searchParams.get("redirectTo"));
   const queryString = searchParams.toString();
 
   const {

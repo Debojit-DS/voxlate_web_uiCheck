@@ -61,6 +61,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const buffer = base64ToBuffer(parsed.data.photo);
+    if (!buffer.length || buffer.length > 10 * 1024 * 1024 || !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(parsed.data.photo)) {
+      return withSecurityHeaders(NextResponse.json({ status: "error", code: "validation_error", message: "Upload a JPG, PNG, WebP, or GIF under 10 MB." }, { status: 400 }));
+    }
     const mimeMatch = parsed.data.photo.match(/data:([^;]+);/);
     const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
@@ -68,6 +71,7 @@ export async function POST(req: NextRequest) {
       cloudinary.uploader.upload_stream(
         {
           folder: "voxlate/profiles",
+          timeout: 25_000,
           resource_type: "image",
           format: mimeType.split("/")[1] || "jpg",
         },
