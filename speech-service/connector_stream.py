@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 import jwt
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ReturnDocument
 
@@ -18,6 +19,14 @@ from voice_clone_tts import onboard_user_voice, generate_live_tts
 
 load_dotenv()
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[value.strip() for value in os.getenv("FRONTEND_URL", "http://localhost:3002").split(",")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 logger = logging.getLogger("voxlate.demo")
 mongo_client = AsyncIOMotorClient(os.getenv("DATABASE_URL"), serverSelectionTimeoutMS=5000)
 users_collection = mongo_client[os.getenv("DEMO_DATABASE_NAME", "voxlate_db")]["users"]
